@@ -1,0 +1,51 @@
+name: Enhance CSV for Multi-Platform
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  enhance-csv:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas
+    
+    - name: Run CSV enhancement
+      run: python enhance_csv.py
+    
+    - name: Commit enhanced CSV
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add companies_enhanced.csv config_fixed.json || true
+        if ! git diff --staged --quiet; then
+          git commit -m "Enhanced CSV for multi-platform job scraping"
+          git push
+        else
+          echo "No changes to commit"
+        fi
+    
+    - name: Create enhancement summary
+      run: |
+        echo "## 🔧 CSV Enhancement Complete" >> $GITHUB_STEP_SUMMARY
+        echo "**Enhanced file:** companies_enhanced.csv" >> $GITHUB_STEP_SUMMARY
+        echo "**Fixed config:** config_fixed.json" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Ready for multi-platform job scraping!" >> $GITHUB_STEP_SUMMARY
