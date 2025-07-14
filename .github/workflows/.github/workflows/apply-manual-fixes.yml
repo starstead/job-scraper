@@ -1,0 +1,98 @@
+name: Apply Manual URL Fixes
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  apply-fixes:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas
+    
+    - name: Apply manual fixes
+      run: |
+        python -c "
+        import pandas as pd
+        
+        print('Loading files...')
+        manual_df = pd.read_csv('companies_manual_review.csv')
+        main_df = pd.read_csv('companies_cleaned_final.csv')
+        
+        print(f'Manual review entries: {len(manual_df)}')
+        print(f'Main companies: {len(main_df)}')
+        
+        updates_applied = 0
+        
+        for _, row in manual_df.iterrows():
+            company_name = row['Company']
+            new_url = str(row.get('New_Careers_URL', '')).strip()
+            action = str(row.get('Action', '')).lower().strip()
+            
+            print(f'Processing: {company_name}')
+            print(f'  New URL: {new_url}')
+            print(f'  Action: {action}')
+            
+            if 'remove' in action:
+                main_df = main_df[main_df['Company'] != company_name]
+                print(f'  → Removed: {company_name}')
+                updates_applied += 1
+            elif new_url and new_url != 'nan' and new_url != '':
+                mask = main_df['Company'] == company_name
+                if mask.any():
+                    main_df.loc[mask, 'Careers Site URL'] = new_url
+                    main_df.loc[mask, 'Primary_Source'] = 'careers_page'
+                    print(f'  → Updated URL: {company_name}')
+                    updates_applied += 1
+            elif 'job_boards' in action or action == 'job_boards':
+                mask = main_df['Company'] == company_name
+                if mask.any():
+                    main_df.loc[mask, 'Primary_Source'] = 'job_boards'
+                    main_df.loc[mask, 'Careers Site URL'] = ''
+                    print(f'  → Set to job boards: {company_name}')
+                    updates_applied += 1
+        
+        main_df.to_csv('companies_final_ready.csv', index=False)
+        print(f'\\nApplied {updates_applied} manual fixes')
+        print(f'Final company count: {len(main_df)}')
+        
+        source_counts = main_df['Primary_Source'].value_counts()
+        print('\\nPrimary sources:')
+        for source, count in source_counts.items():
+            print(f'  {source}: {count} companies')
+        "
+    
+    - name: Commit final file
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add companies_final_ready.csv || true
+        if ! git diff --staged --quiet; then
+          git commit -m "Applied manual URL fixes - ready for multi-platform scraping"
+          git push
+        else
+          echo "No changes to commit"
+        fi
+    
+    - name: Create summary
+      run: |
+        echo "## ✅ Manual Fixes Applied" >> $GITHUB_STEP_SUMMARY
+        echo "**Final file:** companies_final_ready.csv" >> $GITHUB_STEP_SUMMARY
+        echo "**Ready for:** Multi-platform job scraper" >> $GITHUB_STEP_SUMMARY
