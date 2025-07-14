@@ -1,0 +1,51 @@
+name: Cleanup Companies and URLs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  cleanup-companies:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas
+    
+    - name: Run company cleanup
+      run: python cleanup_companies.py
+    
+    - name: Commit cleaned files
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add companies_cleaned_final.csv companies_manual_review.csv || true
+        if ! git diff --staged --quiet; then
+          git commit -m "Cleaned companies: removed duplicates and fixed URLs"
+          git push
+        else
+          echo "No changes to commit"
+        fi
+    
+    - name: Create cleanup summary
+      run: |
+        echo "## 🧹 Company Cleanup Complete" >> $GITHUB_STEP_SUMMARY
+        echo "**Main file:** companies_cleaned_final.csv" >> $GITHUB_STEP_SUMMARY
+        echo "**Manual review:** companies_manual_review.csv" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Next: Add missing URLs to the manual review file!" >> $GITHUB_STEP_SUMMARY
