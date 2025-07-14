@@ -1,0 +1,50 @@
+name: Cleanup Company URLs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  cleanup-urls:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pandas beautifulsoup4
+    
+    - name: Run URL cleanup
+      run: python url_cleanup.py
+    
+    - name: Commit cleaned URLs
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add companies_cleaned.csv || true
+        if ! git diff --staged --quiet; then
+          git commit -m "URL cleanup - fixed broken careers page URLs"
+          git push
+        else
+          echo "No changes to commit"
+        fi
+    
+    - name: Create cleanup summary
+      run: |
+        echo "## 🔧 URL Cleanup Complete" >> $GITHUB_STEP_SUMMARY
+        echo "**Results saved to:** companies_cleaned.csv" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Review the cleaned file and replace your main companies.csv when ready!" >> $GITHUB_STEP_SUMMARY
