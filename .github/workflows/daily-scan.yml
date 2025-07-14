@@ -2,10 +2,7 @@ name: Daily Job Scan
 
 on:
   schedule:
-    # Run every day at 9 AM UTC (adjust timezone as needed)
     - cron: '0 9 * * *'
-  
-  # Allow manual triggering
   workflow_dispatch:
 
 permissions:
