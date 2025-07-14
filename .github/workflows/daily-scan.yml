@@ -36,7 +36,7 @@ jobs:
       env:
         NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-      run: python job_scraper.py
+      run: python multiplatform_job_scraper.py
     
     - name: Commit results
       run: |
