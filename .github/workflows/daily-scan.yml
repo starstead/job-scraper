@@ -1,5 +1,4 @@
-Here's the corrected workflow file with proper permissions and a fixed cron schedule:
-yamlname: Daily Job Scan
+name: Daily Job Scan
 
 on:
   schedule:
