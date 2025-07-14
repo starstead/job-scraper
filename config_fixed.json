@@ -1,0 +1,37 @@
+{
+  "keywords": [
+    "product manager",
+    "senior product manager",
+    "associate product manager",
+    "product marketing manager",
+    "product owner",
+    "product analyst",
+    "software engineer",
+    "senior software engineer",
+    "frontend engineer",
+    "backend engineer",
+    "fullstack engineer",
+    "data analyst",
+    "data scientist",
+    "business analyst",
+    "marketing manager",
+    "growth manager",
+    "remote",
+    "hybrid",
+    "python",
+    "javascript",
+    "react",
+    "node.js",
+    "sql",
+    "aws",
+    "machine learning",
+    "artificial intelligence"
+  ],
+  "settings": {
+    "scan_frequency": "daily",
+    "use_multiplatform": true,
+    "indeed_enabled": true,
+    "angellist_enabled": true,
+    "glassdoor_enabled": true
+  }
+}
