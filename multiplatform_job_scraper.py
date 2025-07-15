@@ -42,7 +42,22 @@ class MultiPlatformJobScraper:
             return config.get('keywords', [])
         except:
             # Default keywords if no config file
-            return ["product manager", "software engineer", "data analyst", "remote", "python", "javascript"]
+            return [
+                "product manager", "senior product manager", "associate product manager",
+                "principal product manager", "group product manager", "product owner", 
+                "head of product", "director of product management", "project manager",
+                "senior project manager", "program manager", "senior program manager",
+                "technical project manager", "technical program manager", "portfolio manager",
+                "implementation manager", "implementation project manager", "PMO manager",
+                "manager of program management", "manager of project management",
+                "director of program management", "director of project management", 
+                "strategy manager", "business analyst", "integration product manager",
+                "product manager mergers and acquisitions", "M&A product manager",
+                "post-merger integration manager", "integration program manager",
+                "customer success operations manager", "customer success strategy manager",
+                "product operations manager", "customer experience manager",
+                "product-led customer success manager", "remote", "hybrid"
+            ]
     
     def scrape_careers_page(self, url, keywords, company_name):
         """Scrape company careers page (primary method)"""
