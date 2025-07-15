@@ -400,8 +400,8 @@ class MultiPlatformJobScraper:
         companies_scanned = 0
         new_jobs_added = 0
         
-        # Limit to first 20 companies for testing - REMOVE [:20] for full scan
-        companies_to_scan = companies[:20]
+       # Full scan of all companies
+companies_to_scan = companies
         
         for company_data in companies_to_scan:
             try:
