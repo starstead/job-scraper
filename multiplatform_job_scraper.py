@@ -41,7 +41,7 @@ class MultiPlatformJobScraper:
                 config = json.load(f)
             return config.get('keywords', [])
         except:
-            # Default keywords if no config file
+            # Default keywords - your product/project manager list
             return [
                 "product manager", "senior product manager", "associate product manager",
                 "principal product manager", "group product manager", "product owner", 
@@ -56,7 +56,7 @@ class MultiPlatformJobScraper:
                 "post-merger integration manager", "integration program manager",
                 "customer success operations manager", "customer success strategy manager",
                 "product operations manager", "customer experience manager",
-                "product-led customer success manager", "remote", "hybrid"
+                "product-led customer success manager"
             ]
     
     def scrape_careers_page(self, url, keywords, company_name):
@@ -183,9 +183,9 @@ class MultiPlatformJobScraper:
             return []
     
     def scrape_indeed_company(self, company_name, location="Denver,CO", keywords=None):
-        """Scrape Indeed for specific company jobs"""
+        """Scrape Indeed for specific company jobs - EXACT COMPANY ONLY"""
         try:
-            # Build Indeed search URL
+            # Build Indeed search URL for exact company
             query = f'company:"{company_name}"'
             url = f"https://www.indeed.com/jobs?q={query.replace(' ', '+')}&l={location}"
             
@@ -204,6 +204,11 @@ class MultiPlatformJobScraper:
             
             for card in job_cards[:6]:  # Limit to 6 jobs per company
                 try:
+                    # CRITICAL: Verify this job is actually from the target company
+                    card_text = card.get_text().lower()
+                    if company_name.lower() not in card_text:
+                        continue  # Skip if not from our target company
+                    
                     # Extract job title
                     title_elem = card.find(['h2', 'a'], attrs={'data-testid': 'job-title'})
                     if not title_elem:
@@ -219,7 +224,6 @@ class MultiPlatformJobScraper:
                         job_url = url
                     
                     # Improved keyword matching for Indeed
-                    card_text = card.get_text().lower()
                     found_keywords = []
                     if keywords:
                         for keyword in keywords:
@@ -230,7 +234,7 @@ class MultiPlatformJobScraper:
                     core_keywords = [kw for kw in found_keywords if kw not in ['remote', 'hybrid']]
                     modifier_keywords = [kw for kw in found_keywords if kw in ['remote', 'hybrid']]
                     
-                    # Only add if we have core job keywords
+                    # Only add if we have core job keywords (not just remote)
                     if core_keywords:
                         jobs_found.append({
                             'title': title[:100],
@@ -249,7 +253,7 @@ class MultiPlatformJobScraper:
             return []
     
     def scrape_angellist_company(self, company_name):
-        """Scrape AngelList for startup jobs"""
+        """Scrape AngelList for startup jobs - EXACT COMPANY ONLY"""
         try:
             # Convert company name to AngelList slug format
             company_slug = re.sub(r'[^a-zA-Z0-9-]', '', 
@@ -261,6 +265,11 @@ class MultiPlatformJobScraper:
                 return []
             
             soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Verify we're on the correct company page
+            page_text = soup.get_text().lower()
+            if company_name.lower() not in page_text:
+                return []  # Not the right company page
             
             # AngelList job selectors
             job_elements = soup.find_all(['div', 'article'], 
@@ -296,8 +305,9 @@ class MultiPlatformJobScraper:
             return []
     
     def scrape_glassdoor_company(self, company_name, location="Denver, CO"):
-        """Scrape Glassdoor for company jobs"""
+        """Scrape Glassdoor for company jobs - EXACT COMPANY ONLY"""
         try:
+            # Search specifically for the company
             search_query = company_name.replace(" ", "%20")
             url = f"https://www.glassdoor.com/Job/jobs.htm?sc.keyword={search_query}&locT=C&locId=1148170"
             
@@ -314,6 +324,11 @@ class MultiPlatformJobScraper:
             
             for card in job_cards[:3]:  # Limit to 3 jobs
                 try:
+                    # CRITICAL: Verify this job is from the target company
+                    card_text = card.get_text().lower()
+                    if company_name.lower() not in card_text:
+                        continue  # Skip if not from our target company
+                    
                     title_elem = card.find(['a', 'h2'], class_=re.compile(r'job.*title', re.I))
                     title = title_elem.get_text().strip() if title_elem else "Glassdoor Job"
                     
@@ -361,6 +376,7 @@ class MultiPlatformJobScraper:
             time.sleep(self.rate_limits['careers'])
         
         # 2. Use job boards as backup OR primary (based on strategy)
+        # ONLY if careers page failed or company has no careers URL
         if primary_source == 'job_boards' or len(all_jobs) < 2:
             
             # Indeed (for all companies using job boards)
@@ -470,7 +486,7 @@ class MultiPlatformJobScraper:
             return
         
         print(f"🚀 Starting multi-platform scan of {len(companies)} companies...")
-        print(f"Keywords: {', '.join(keywords)}")
+        print(f"Keywords: {', '.join(keywords[:10])}...")  # Show first 10 keywords
         
         # Initialize Notion if configured
         notion_token = os.getenv('NOTION_TOKEN')
@@ -490,7 +506,7 @@ class MultiPlatformJobScraper:
         companies_scanned = 0
         new_jobs_added = 0
         
-        # Full scan of all companies
+        # Full scan of all companies from YOUR CSV ONLY
         companies_to_scan = companies
         
         for company_data in companies_to_scan:
