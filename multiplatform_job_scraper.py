@@ -91,9 +91,9 @@ class MultiPlatformJobScraper:
                 
                 # Categorize keywords  
                 core_keywords, modifier_keywords = self.categorize_keywords(found_keywords)
-        """Enhanced keyword matching with case-insensitive and flexible matching"""
-        text_lower = text.lower()
-        found_keywords = []
+            """Enhanced keyword matching with case-insensitive and flexible matching"""
+            text_lower = text.lower()
+            found_keywords = []
         
         for keyword in keywords:
             keyword_lower = keyword.lower()
