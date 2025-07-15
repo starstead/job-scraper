@@ -350,17 +350,16 @@ class MultiPlatformJobScraper:
             new_page = {
                 "parent": {"database_id": database_id},
                 "properties": {
-                    "Job Title": {"title": [{"text": {"content": job_data['title']}}]},
-                    "Company": {"rich_text": [{"text": {"content": job_data['company']}}]},
-                    "Industry": {"select": {"name": job_data['industry']}},
-                    "City": {"rich_text": [{"text": {"content": job_data.get('city', '')}}]},
-                    "Job URL": {"url": job_data['url']},
-                    "Keywords Found": {"multi_select": [{"name": kw} for kw in job_data['keywords_found']]},
-                    "Date Found": {"date": {"start": datetime.now().strftime('%Y-%m-%d')}},
-                    "Status": {"select": {"name": "New"}},
-                    "Source": {"select": {"name": job_data['source']}},
-                    "Unique ID": {"rich_text": [{"text": {"content": job_data['unique_id']}}]}
-                }
+    "Job Title": {"title": [{"text": {"content": job_data['title']}}]},
+    "Company": {"rich_text": [{"text": {"content": job_data['company']}}]},
+    "Industry": {"select": {"name": job_data['industry']}},
+    "Job URL": {"url": job_data['url']},
+    "Source": {"select": {"name": job_data['source']}},
+    "Keywords Found": {"multi_select": [{"name": kw} for kw in job_data['keywords_found']]},
+    "Date Found": {"date": {"start": datetime.now().strftime('%Y-%m-%d')}},
+    "Status": {"select": {"name": "New"}},
+    "Unique ID": {"rich_text": [{"text": {"content": job_data['unique_id']}}]}
+}
             }
             
             notion.pages.create(**new_page)
