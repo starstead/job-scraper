@@ -400,8 +400,8 @@ class MultiPlatformJobScraper:
         companies_scanned = 0
         new_jobs_added = 0
         
-       # Full scan of all companies
-companies_to_scan = companies
+        # Full scan of all companies
+        companies_to_scan = companies
         
         for company_data in companies_to_scan:
             try:
