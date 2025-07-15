@@ -354,6 +354,46 @@ class MultiPlatformJobScraper:
             print(f"  Error scraping Glassdoor: {str(e)[:50]}")
             return []
     
+    def create_unique_id(self, company, title, url):
+        """Create unique ID for duplicate detection - IMPROVED"""
+        # Clean and normalize the inputs
+        company_clean = re.sub(r'[^a-zA-Z0-9]', '', company.lower())
+        title_clean = re.sub(r'[^a-zA-Z0-9]', '', title.lower())
+        url_clean = url.split('?')[0].lower()  # Remove URL parameters
+        
+        unique_string = f"{company_clean}_{title_clean}_{url_clean}"
+        return hashlib.md5(unique_string.encode()).hexdigest()[:16]
+    
+    def remove_duplicates_from_jobs(self, jobs_list):
+        """Remove duplicates from jobs list before adding to Notion"""
+        seen_jobs = {}
+        unique_jobs = []
+        
+        for job in jobs_list:
+            # Create multiple keys for comparison
+            title_company_key = f"{job['company'].lower().strip()}_{job['title'].lower().strip()}"
+            url_key = job['url'].split('?')[0].lower()  # Remove URL parameters
+            
+            # Check if we've seen this job before
+            is_duplicate = False
+            
+            # Check by title + company
+            if title_company_key in seen_jobs:
+                is_duplicate = True
+                print(f"  🔄 Removed duplicate (title+company): {job['title'][:50]}")
+            
+            # Check by URL (if it's a real job URL, not just the company page)
+            elif url_key in seen_jobs and 'job' in url_key.lower():
+                is_duplicate = True
+                print(f"  🔄 Removed duplicate (URL): {job['title'][:50]}")
+            
+            if not is_duplicate:
+                seen_jobs[title_company_key] = job
+                seen_jobs[url_key] = job
+                unique_jobs.append(job)
+        
+        return unique_jobs
+    
     def scan_company_multiplatform(self, company_data, keywords):
         """Scan a single company across multiple platforms"""
         company_name = company_data['Company']
@@ -402,6 +442,9 @@ class MultiPlatformJobScraper:
                 print(f"  Glassdoor: {len(glassdoor_jobs)} jobs")
                 time.sleep(self.rate_limits['glassdoor'])
         
+        # Remove duplicates within this company's jobs
+        all_jobs = self.remove_duplicates_from_jobs(all_jobs)
+        
         # Add company metadata to all jobs
         for job in all_jobs:
             job['company'] = company_name
@@ -410,19 +453,15 @@ class MultiPlatformJobScraper:
             job['scan_date'] = datetime.now().strftime('%Y-%m-%d')
             job['unique_id'] = self.create_unique_id(company_name, job['title'], job['url'])
         
-        print(f"  Total: {len(all_jobs)} jobs")
+        print(f"  Final total: {len(all_jobs)} jobs")
         
         return all_jobs, platform_stats
-    
-    def create_unique_id(self, company, title, url):
-        """Create unique ID for duplicate detection"""
-        unique_string = f"{company.lower()}_{title.lower()}_{url}"
-        return hashlib.md5(unique_string.encode()).hexdigest()[:16]
     
     def get_existing_jobs(self, notion, database_id):
         """Get existing jobs from Notion to check for duplicates"""
         try:
             existing_jobs = set()
+            existing_titles = set()
             has_more = True
             start_cursor = None
             
@@ -435,20 +474,29 @@ class MultiPlatformJobScraper:
                 
                 for page in response['results']:
                     try:
+                        # Get unique ID
                         unique_id = page['properties'].get('Unique ID', {}).get('rich_text', [])
                         if unique_id:
                             existing_jobs.add(unique_id[0]['plain_text'])
+                        
+                        # Also track by title + company for extra duplicate protection
+                        title = page['properties'].get('Job Title', {}).get('title', [])
+                        company = page['properties'].get('Company', {}).get('rich_text', [])
+                        if title and company:
+                            title_text = title[0]['plain_text'].lower().strip()
+                            company_text = company[0]['plain_text'].lower().strip()
+                            existing_titles.add(f"{company_text}_{title_text}")
                     except:
                         continue
                 
                 has_more = response['has_more']
                 start_cursor = response.get('next_cursor')
             
-            return existing_jobs
+            return existing_jobs, existing_titles
             
         except Exception as e:
             print(f"Error getting existing jobs: {e}")
-            return set()
+            return set(), set()
     
     def add_job_to_notion(self, notion, database_id, job_data):
         """Add a single job to Notion database"""
@@ -493,10 +541,11 @@ class MultiPlatformJobScraper:
         notion_database_id = os.getenv('NOTION_DATABASE_ID')
         notion = None
         existing_job_ids = set()
+        existing_titles = set()
         
         if notion_token and notion_database_id:
             notion = Client(auth=notion_token)
-            existing_job_ids = self.get_existing_jobs(notion, notion_database_id)
+            existing_job_ids, existing_titles = self.get_existing_jobs(notion, notion_database_id)
             print(f"Found {len(existing_job_ids)} existing jobs in Notion")
         else:
             print("Notion credentials not provided, skipping Notion sync")
@@ -505,6 +554,7 @@ class MultiPlatformJobScraper:
         total_stats = {'careers': 0, 'indeed': 0, 'angellist': 0, 'glassdoor': 0}
         companies_scanned = 0
         new_jobs_added = 0
+        duplicates_skipped = 0
         
         # Full scan of all companies from YOUR CSV ONLY
         companies_to_scan = companies
@@ -519,11 +569,26 @@ class MultiPlatformJobScraper:
                 for job in company_jobs:
                     all_jobs.append(job)
                     
-                    # Add to Notion if not duplicate
-                    if notion and job['unique_id'] not in existing_job_ids:
-                        if self.add_job_to_notion(notion, notion_database_id, job):
-                            new_jobs_added += 1
-                            existing_job_ids.add(job['unique_id'])
+                    # Enhanced duplicate checking
+                    if notion:
+                        title_company_key = f"{job['company'].lower().strip()}_{job['title'].lower().strip()}"
+                        
+                        is_duplicate = (
+                            job['unique_id'] in existing_job_ids or 
+                            title_company_key in existing_titles
+                        )
+                        
+                        if not is_duplicate:
+                            if self.add_job_to_notion(notion, notion_database_id, job):
+                                new_jobs_added += 1
+                                existing_job_ids.add(job['unique_id'])
+                                existing_titles.add(title_company_key)
+                                print(f"    ✅ Added to Notion: {job['title'][:50]}")
+                            else:
+                                print(f"    ❌ Failed to add: {job['title'][:50]}")
+                        else:
+                            duplicates_skipped += 1
+                            print(f"    🔄 Duplicate skipped: {job['title'][:50]}")
                 
                 companies_scanned += 1
                 
@@ -540,11 +605,11 @@ class MultiPlatformJobScraper:
                 continue
         
         # Save results
-        self.save_results(all_jobs, total_stats, companies_scanned, new_jobs_added)
+        self.save_results(all_jobs, total_stats, companies_scanned, new_jobs_added, duplicates_skipped)
         
         return all_jobs
     
-    def save_results(self, all_jobs, stats, companies_scanned, new_jobs_added):
+    def save_results(self, all_jobs, stats, companies_scanned, new_jobs_added, duplicates_skipped):
         """Save multi-platform scan results"""
         os.makedirs('results', exist_ok=True)
         
@@ -553,6 +618,7 @@ class MultiPlatformJobScraper:
             'companies_scanned': companies_scanned,
             'total_jobs': len(all_jobs),
             'new_jobs_added_to_notion': new_jobs_added,
+            'duplicates_skipped': duplicates_skipped,
             'platform_breakdown': stats,
             'jobs': all_jobs
         }
@@ -564,6 +630,7 @@ class MultiPlatformJobScraper:
         print(f"Companies scanned: {companies_scanned}")
         print(f"Total jobs found: {len(all_jobs)}")
         print(f"New jobs added to Notion: {new_jobs_added}")
+        print(f"Duplicates skipped: {duplicates_skipped}")
         print(f"Platform breakdown:")
         for platform, count in stats.items():
             if count > 0:
