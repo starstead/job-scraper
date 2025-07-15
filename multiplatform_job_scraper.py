@@ -1,4 +1,4 @@
-import requests
+          import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 import json
@@ -80,30 +80,99 @@ class MultiPlatformJobScraper:
             for element in job_elements[:15]:  # Limit to 15 elements per page
                 element_text = element.get_text().lower()
                 
-                # Check for keyword matches
+                # Check for keyword matches with improved logic
                 found_keywords = []
                 for keyword in keywords:
                     if keyword.lower() in element_text:
                         found_keywords.append(keyword)
                 
-                if found_keywords:
-                    # Extract job title
-                    title_element = element.find(['h1', 'h2', 'h3', 'h4', 'a'])
-                    title = title_element.get_text().strip() if title_element else "Job Opening"
+                # Separate core job keywords from modifiers  
+                core_keywords = [kw for kw in found_keywords if kw not in ['remote', 'hybrid']]
+                modifier_keywords = [kw for kw in found_keywords if kw in ['remote', 'hybrid']]
+                
+                # Only process if we have core job keywords (not just remote/hybrid)
+                if core_keywords:
+                    # Better job title extraction
+                    title = "Job Opening"  # Default
                     
-                    # Extract job URL
-                    link_element = element.find('a', href=True)
-                    job_url = link_element['href'] if link_element else url
+                    # Try multiple title extraction strategies
+                    title_strategies = [
+                        # Strategy 1: Look for job-specific title classes
+                        lambda: element.find(['h1', 'h2', 'h3'], class_=re.compile(r'job.*title|title.*job|position.*title', re.I)),
+                        # Strategy 2: Look for any link with job-related text
+                        lambda: element.find('a', string=re.compile(r'manager|engineer|analyst|director|specialist', re.I)),
+                        # Strategy 3: Look for any heading with our keywords
+                        lambda: next((h for h in element.find_all(['h1', 'h2', 'h3', 'h4', 'h5']) 
+                                     if any(kw in h.get_text().lower() for kw in core_keywords)), None),
+                        # Strategy 4: Look for any bold/strong text with keywords
+                        lambda: next((b for b in element.find_all(['strong', 'b']) 
+                                     if any(kw in b.get_text().lower() for kw in core_keywords)), None),
+                        # Strategy 5: Generic heading
+                        lambda: element.find(['h1', 'h2', 'h3', 'h4'])
+                    ]
                     
-                    # Make relative URLs absolute
-                    if job_url.startswith('/'):
-                        base_url = '/'.join(url.split('/')[:3])
-                        job_url = base_url + job_url
+                    for strategy in title_strategies:
+                        try:
+                            title_element = strategy()
+                            if title_element and len(title_element.get_text().strip()) > 3:
+                                title = title_element.get_text().strip()
+                                # Clean up title
+                                title = re.sub(r'\s+', ' ', title)  # Remove extra whitespace
+                                title = title.replace('\n', ' ').replace('\t', ' ')
+                                if len(title) > 5 and title != "Job Opening":
+                                    break
+                        except:
+                            continue
+                    
+                    # Better job URL extraction
+                    job_url = url  # Default to page URL
+                    
+                    # Try multiple URL extraction strategies
+                    url_strategies = [
+                        # Strategy 1: Look for apply/view job buttons
+                        lambda: element.find('a', href=True, string=re.compile(r'apply|view.*job|see.*detail', re.I)),
+                        # Strategy 2: Look for links with job-related classes
+                        lambda: element.find('a', href=True, class_=re.compile(r'job.*link|apply|view.*job', re.I)),
+                        # Strategy 3: Look for links with job-related href patterns
+                        lambda: element.find('a', href=re.compile(r'job|position|career|apply|vacancy', re.I)),
+                        # Strategy 4: Look for any link that contains our job title
+                        lambda: element.find('a', href=True, string=re.compile(re.escape(title[:20]), re.I)) if len(title) > 10 else None,
+                        # Strategy 5: Any link in the element
+                        lambda: element.find('a', href=True)
+                    ]
+                    
+                    for strategy in url_strategies:
+                        try:
+                            link_element = strategy()
+                            if link_element and link_element.get('href'):
+                                href = link_element['href']
+                                # Prefer URLs that look like direct job links
+                                if any(pattern in href.lower() for pattern in ['job', 'position', 'career', 'apply', 'vacancy']):
+                                    job_url = href
+                                    break
+                                elif job_url == url:  # Use as fallback if we don't have anything better
+                                    job_url = href
+                        except:
+                            continue
+                    
+                    # Clean and validate URL
+                    if job_url and job_url != url:
+                        # Make relative URLs absolute
+                        if job_url.startswith('/'):
+                            base_url = '/'.join(url.split('/')[:3])
+                            job_url = base_url + job_url
+                        elif job_url.startswith('http') == False:
+                            base_url = '/'.join(url.split('/')[:3])
+                            job_url = base_url + '/' + job_url
+                    
+                    # Skip if we couldn't get a decent title
+                    if len(title.strip()) < 5 or title.strip().lower() in ['job opening', 'learn more', 'read more', 'apply']:
+                        continue
                     
                     jobs_found.append({
                         'title': title[:100],
                         'url': job_url,
-                        'keywords_found': found_keywords,
+                        'keywords_found': core_keywords + modifier_keywords,
                         'source': 'Careers Page'
                     })
             
@@ -149,20 +218,26 @@ class MultiPlatformJobScraper:
                     else:
                         job_url = url
                     
-                    # Basic keyword matching
+                    # Improved keyword matching for Indeed
                     card_text = card.get_text().lower()
                     found_keywords = []
                     if keywords:
-                        found_keywords = [kw for kw in keywords if kw.lower() in card_text]
-                    else:
-                        found_keywords = ['indeed_listing']
+                        for keyword in keywords:
+                            if keyword.lower() in card_text:
+                                found_keywords.append(keyword)
                     
-                    jobs_found.append({
-                        'title': title[:100],
-                        'url': job_url,
-                        'keywords_found': found_keywords,
-                        'source': 'Indeed'
-                    })
+                    # Apply same core keyword logic
+                    core_keywords = [kw for kw in found_keywords if kw not in ['remote', 'hybrid']]
+                    modifier_keywords = [kw for kw in found_keywords if kw in ['remote', 'hybrid']]
+                    
+                    # Only add if we have core job keywords
+                    if core_keywords:
+                        jobs_found.append({
+                            'title': title[:100],
+                            'url': job_url,
+                            'keywords_found': core_keywords + modifier_keywords,
+                            'source': 'Indeed'
+                        })
                 
                 except Exception as e:
                     continue
@@ -365,16 +440,16 @@ class MultiPlatformJobScraper:
             new_page = {
                 "parent": {"database_id": database_id},
                 "properties": {
-    "Job Title": {"title": [{"text": {"content": job_data['title']}}]},
-    "Company": {"rich_text": [{"text": {"content": job_data['company']}}]},
-    "Industry": {"select": {"name": job_data['industry']}},
-    "Job URL": {"url": job_data['url']},
-    "Source": {"select": {"name": job_data['source']}},
-    "Keywords Found": {"multi_select": [{"name": kw} for kw in job_data['keywords_found']]},
-    "Date Found": {"date": {"start": datetime.now().strftime('%Y-%m-%d')}},
-    "Status": {"select": {"name": "New"}},
-    "Unique ID": {"rich_text": [{"text": {"content": job_data['unique_id']}}]}
-}
+                    "Job Title": {"title": [{"text": {"content": job_data['title']}}]},
+                    "Company": {"rich_text": [{"text": {"content": job_data['company']}}]},
+                    "Industry": {"select": {"name": job_data['industry']}},
+                    "Job URL": {"url": job_data['url']},
+                    "Source": {"select": {"name": job_data['source']}},
+                    "Keywords Found": {"multi_select": [{"name": kw} for kw in job_data['keywords_found']]},
+                    "Date Found": {"date": {"start": datetime.now().strftime('%Y-%m-%d')}},
+                    "Status": {"select": {"name": "New"}},
+                    "Unique ID": {"rich_text": [{"text": {"content": job_data['unique_id']}}]}
+                }
             }
             
             notion.pages.create(**new_page)
