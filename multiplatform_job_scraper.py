@@ -41,22 +41,28 @@ class MultiPlatformJobScraper:
                 config = json.load(f)
             return config.get('keywords', [])
         except:
-            # Default keywords - your product/project manager list
+            # Enhanced default keywords - your product/project manager list with variations
             return [
-                "product manager", "senior product manager", "associate product manager",
-                "principal product manager", "group product manager", "product owner", 
-                "head of product", "director of product management", "project manager",
-                "senior project manager", "program manager", "senior program manager",
-                "technical project manager", "technical program manager", "portfolio manager",
-                "implementation manager", "implementation project manager", "PMO manager",
+                "product manager", "Product Manager", "senior product manager", "Senior Product Manager",
+                "associate product manager", "Associate Product Manager", "principal product manager", 
+                "Principal Product Manager", "group product manager", "Group Product Manager",
+                "product owner", "Product Owner", "head of product", "Head of Product",
+                "director of product management", "Director of Product Management",
+                "product management", "Product Management", "project manager", "Project Manager",
+                "senior project manager", "Senior Project Manager", "program manager", "Program Manager",
+                "senior program manager", "Senior Program Manager", "technical project manager",
+                "Technical Project Manager", "technical program manager", "Technical Program Manager",
+                "portfolio manager", "Portfolio Manager", "implementation manager", "Implementation Manager",
+                "implementation project manager", "PMO manager", "PMO Manager",
                 "manager of program management", "manager of project management",
                 "director of program management", "director of project management", 
-                "strategy manager", "business analyst", "integration product manager",
-                "product manager mergers and acquisitions", "M&A product manager",
-                "post-merger integration manager", "integration program manager",
+                "strategy manager", "Strategy Manager", "business analyst", "Business Analyst",
+                "integration product manager", "product manager mergers and acquisitions",
+                "M&A product manager", "post-merger integration manager", "integration program manager",
                 "customer success operations manager", "customer success strategy manager",
                 "product operations manager", "customer experience manager",
-                "product-led customer success manager"
+                "product-led customer success manager", "project management", "Project Management",
+                "program management", "Program Management"
             ]
     
     def scrape_careers_page(self, url, keywords, company_name):
@@ -78,17 +84,56 @@ class MultiPlatformJobScraper:
             jobs_found = []
             
             for element in job_elements[:15]:  # Limit to 15 elements per page
-                element_text = element.get_text().lower()
+                element_text = element.get_text()
                 
-                # Check for keyword matches with improved logic
-                found_keywords = []
-                for keyword in keywords:
-                    if keyword.lower() in element_text:
+                # Enhanced keyword matching
+                found_keywords = self.check_keyword_match(element_text, keywords)
+                
+                # Categorize keywords  
+                core_keywords, modifier_keywords = self.categorize_keywords(found_keywords)
+        """Enhanced keyword matching with case-insensitive and flexible matching"""
+        text_lower = text.lower()
+        found_keywords = []
+        
+        for keyword in keywords:
+            keyword_lower = keyword.lower()
+            
+            # Method 1: Exact match (case-insensitive)
+            if keyword_lower in text_lower:
+                found_keywords.append(keyword)
+                continue
+            
+            # Method 2: Word boundary matching for compound terms
+            # This helps catch "Product Management" even if keyword is "product manager"
+            keyword_words = keyword_lower.split()
+            if len(keyword_words) >= 2:
+                # Check if all words of the keyword appear in the text
+                all_words_found = all(word in text_lower for word in keyword_words)
+                if all_words_found:
+                    # Additional check: words should be reasonably close to each other
+                    keyword_pattern = r'\b' + r'\W+'.join(re.escape(word) for word in keyword_words) + r'\b'
+                    if re.search(keyword_pattern, text_lower):
                         found_keywords.append(keyword)
-                
-                # Separate core job keywords from modifiers  
-                core_keywords = [kw for kw in found_keywords if kw not in ['remote', 'hybrid']]
-                modifier_keywords = [kw for kw in found_keywords if kw in ['remote', 'hybrid']]
+                        continue
+        
+        return found_keywords
+    
+    def categorize_keywords(self, found_keywords):
+        """Categorize keywords into core job keywords vs modifiers"""
+        # Modifiers that shouldn't count as core job requirements
+        modifiers = ['remote', 'hybrid', 'work from home', 'telecommute', 'virtual']
+        
+        core_keywords = []
+        modifier_keywords = []
+        
+        for keyword in found_keywords:
+            keyword_lower = keyword.lower()
+            if any(modifier in keyword_lower for modifier in modifiers):
+                modifier_keywords.append(keyword)
+            else:
+                core_keywords.append(keyword)
+        
+        return core_keywords, modifier_keywords
                 
                 # Only process if we have core job keywords (not just remote/hybrid)
                 if core_keywords:
@@ -458,12 +503,15 @@ class MultiPlatformJobScraper:
         return all_jobs, platform_stats
     
     def get_existing_jobs(self, notion, database_id):
-        """Get existing jobs from Notion to check for duplicates"""
+        """Get existing jobs from Notion to check for duplicates - ENHANCED"""
         try:
             existing_jobs = set()
             existing_titles = set()
+            existing_company_title_combos = set()
             has_more = True
             start_cursor = None
+            
+            print("📋 Loading existing jobs from Notion to prevent duplicates...")
             
             while has_more:
                 response = notion.databases.query(
@@ -479,26 +527,72 @@ class MultiPlatformJobScraper:
                         if unique_id:
                             existing_jobs.add(unique_id[0]['plain_text'])
                         
-                        # Also track by title + company for extra duplicate protection
+                        # Get title and company for comprehensive duplicate checking
                         title = page['properties'].get('Job Title', {}).get('title', [])
                         company = page['properties'].get('Company', {}).get('rich_text', [])
+                        
                         if title and company:
                             title_text = title[0]['plain_text'].lower().strip()
                             company_text = company[0]['plain_text'].lower().strip()
+                            
+                            # Multiple ways to track the same job
                             existing_titles.add(f"{company_text}_{title_text}")
+                            
+                            # Normalize for better matching
+                            title_normalized = re.sub(r'[^a-zA-Z0-9\s]', '', title_text)
+                            title_normalized = re.sub(r'\s+', ' ', title_normalized).strip()
+                            
+                            existing_company_title_combos.add(f"{company_text}|{title_normalized}")
+                            
+                            # Also check for partial title matches (in case title formatting changes)
+                            title_keywords = title_normalized.split()
+                            if len(title_keywords) >= 2:
+                                title_short = ' '.join(title_keywords[:2])  # First two words
+                                existing_company_title_combos.add(f"{company_text}|{title_short}")
                     except:
                         continue
                 
                 has_more = response['has_more']
                 start_cursor = response.get('next_cursor')
             
-            return existing_jobs, existing_titles
+            print(f"📋 Found {len(existing_jobs)} existing jobs to avoid duplicating")
+            
+            return existing_jobs, existing_titles, existing_company_title_combos
             
         except Exception as e:
             print(f"Error getting existing jobs: {e}")
-            return set(), set()
+            return set(), set(), set()
     
-    def add_job_to_notion(self, notion, database_id, job_data):
+    def is_job_duplicate(self, job, existing_job_ids, existing_titles, existing_combos):
+        """Comprehensive duplicate checking for a job"""
+        company_lower = job['company'].lower().strip()
+        title_lower = job['title'].lower().strip()
+        
+        # Method 1: Check unique ID
+        if job['unique_id'] in existing_job_ids:
+            return True, "unique_id"
+        
+        # Method 2: Check exact title + company combination
+        title_company_key = f"{company_lower}_{title_lower}"
+        if title_company_key in existing_titles:
+            return True, "title_company"
+        
+        # Method 3: Check normalized title + company
+        title_normalized = re.sub(r'[^a-zA-Z0-9\s]', '', title_lower)
+        title_normalized = re.sub(r'\s+', ' ', title_normalized).strip()
+        combo_key = f"{company_lower}|{title_normalized}"
+        if combo_key in existing_combos:
+            return True, "normalized_combo"
+        
+        # Method 4: Check partial title match (first 2 words)
+        title_words = title_normalized.split()
+        if len(title_words) >= 2:
+            title_short = ' '.join(title_words[:2])
+            short_combo_key = f"{company_lower}|{title_short}"
+            if short_combo_key in existing_combos:
+                return True, "partial_title"
+        
+        return False, None
         """Add a single job to Notion database"""
         try:
             new_page = {
@@ -542,11 +636,12 @@ class MultiPlatformJobScraper:
         notion = None
         existing_job_ids = set()
         existing_titles = set()
+        existing_combos = set()
         
         if notion_token and notion_database_id:
             notion = Client(auth=notion_token)
-            existing_job_ids, existing_titles = self.get_existing_jobs(notion, notion_database_id)
-            print(f"Found {len(existing_job_ids)} existing jobs in Notion")
+            existing_job_ids, existing_titles, existing_combos = self.get_existing_jobs(notion, notion_database_id)
+            print(f"📋 Loaded existing jobs for duplicate prevention")
         else:
             print("Notion credentials not provided, skipping Notion sync")
         
@@ -569,26 +664,34 @@ class MultiPlatformJobScraper:
                 for job in company_jobs:
                     all_jobs.append(job)
                     
-                    # Enhanced duplicate checking
+                    # Enhanced duplicate checking with detailed logging
                     if notion:
-                        title_company_key = f"{job['company'].lower().strip()}_{job['title'].lower().strip()}"
-                        
-                        is_duplicate = (
-                            job['unique_id'] in existing_job_ids or 
-                            title_company_key in existing_titles
+                        is_duplicate, duplicate_reason = self.is_job_duplicate(
+                            job, existing_job_ids, existing_titles, existing_combos
                         )
                         
                         if not is_duplicate:
                             if self.add_job_to_notion(notion, notion_database_id, job):
                                 new_jobs_added += 1
+                                # Add to tracking sets to prevent duplicates within this run
                                 existing_job_ids.add(job['unique_id'])
+                                
+                                company_lower = job['company'].lower().strip()
+                                title_lower = job['title'].lower().strip()
+                                title_company_key = f"{company_lower}_{title_lower}"
                                 existing_titles.add(title_company_key)
+                                
+                                title_normalized = re.sub(r'[^a-zA-Z0-9\s]', '', title_lower)
+                                title_normalized = re.sub(r'\s+', ' ', title_normalized).strip()
+                                combo_key = f"{company_lower}|{title_normalized}"
+                                existing_combos.add(combo_key)
+                                
                                 print(f"    ✅ Added to Notion: {job['title'][:50]}")
                             else:
                                 print(f"    ❌ Failed to add: {job['title'][:50]}")
                         else:
                             duplicates_skipped += 1
-                            print(f"    🔄 Duplicate skipped: {job['title'][:50]}")
+                            print(f"    🔄 Duplicate skipped ({duplicate_reason}): {job['title'][:50]}")
                 
                 companies_scanned += 1
                 
