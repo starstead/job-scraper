@@ -43,11 +43,3 @@
     "glassdoor_enabled": true
   }
 }
-  "settings": {
-    "scan_frequency": "daily",
-    "use_multiplatform": true,
-    "indeed_enabled": true,
-    "angellist_enabled": true,
-    "glassdoor_enabled": true
-  }
-}
