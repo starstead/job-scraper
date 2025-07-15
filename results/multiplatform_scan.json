@@ -1,10 +1,10 @@
 {
-  "scan_date": "2025-07-15T17:47:45.525628",
+  "scan_date": "2025-07-15T18:03:28.031137",
   "companies_scanned": 20,
-  "total_jobs": 5,
-  "new_jobs_added_to_notion": 0,
+  "total_jobs": 9,
+  "new_jobs_added_to_notion": 7,
   "platform_breakdown": {
-    "careers": 5,
+    "careers": 9,
     "indeed": 0,
     "angellist": 0,
     "glassdoor": 0
@@ -79,6 +79,59 @@
       "company_size": "Medium",
       "scan_date": "2025-07-15",
       "unique_id": "35606dd3b92d3aa7"
+    },
+    {
+      "title": "Senior Software Engineer, Lending \n\n\n\n\n\nEngineering \n\n\n\nEngineering \u2022  Singapore \n\n\n\n\n\n \n\n\n\n\nAsia Pa",
+      "url": "https://careers.airwallex.com/job/6c29e112-c94c-4346-9721-283aa4f4bcdc/senior-software-engineer-lending/",
+      "keywords_found": [
+        "software engineer",
+        "senior software engineer"
+      ],
+      "source": "Careers Page",
+      "company": "Airwallex",
+      "industry": "Fintech",
+      "company_size": "Medium",
+      "scan_date": "2025-07-15",
+      "unique_id": "af6cf1bd90852eca"
+    },
+    {
+      "title": "Staff Software Engineer, Lending \n\n\n\n\n\nEngineering \n\n\n\nEngineering \u2022  Singapore \n\n\n\n\n\n \n\n\n\n\nAsia Pac",
+      "url": "https://careers.airwallex.com/job/078de7a5-2f5b-4420-ba5c-8d82a2110548/staff-software-engineer-lending/",
+      "keywords_found": [
+        "software engineer"
+      ],
+      "source": "Careers Page",
+      "company": "Airwallex",
+      "industry": "Fintech",
+      "company_size": "Medium",
+      "scan_date": "2025-07-15",
+      "unique_id": "cce434e5ddf58ab6"
+    },
+    {
+      "title": "Product Manager, Local Payment Methods \n\n\n\n\n\nProduct \n\n\n\nProduct \u2022  Singapore \n\n\n\n\n\n \n\n\n\n\nAsia Pacif",
+      "url": "https://careers.airwallex.com/job/574b497c-ffeb-4f36-8685-f2cbc1f99d05/product-manager-local-payment-methods/",
+      "keywords_found": [
+        "product manager"
+      ],
+      "source": "Careers Page",
+      "company": "Airwallex",
+      "industry": "Fintech",
+      "company_size": "Medium",
+      "scan_date": "2025-07-15",
+      "unique_id": "1d3f9eee2d49b79c"
+    },
+    {
+      "title": "Staff Software Engineer, Notification \n\n\n\n\n\nEngineering \n\n\n\nEngineering \u2022  Shanghai \n\n\n\n\n\n \n\n\n\n\nAsia",
+      "url": "https://careers.airwallex.com/job/a77e206f-f11c-4da8-a79f-d28766361041/staff-software-engineer-notification/",
+      "keywords_found": [
+        "software engineer"
+      ],
+      "source": "Careers Page",
+      "company": "Airwallex",
+      "industry": "Fintech",
+      "company_size": "Medium",
+      "scan_date": "2025-07-15",
+      "unique_id": "a18c7128afa23274"
     }
   ]
 }
