@@ -17,7 +17,7 @@ def clean_companies_csv():
         'Neat Capital',
         'Open Text', 
         'Orderly',
-        'Pathily'
+        'Pithily'
     ]
     
     print(f"\n🗑️ Removing {len(companies_to_remove)} companies:")
@@ -73,27 +73,6 @@ def clean_companies_csv():
             print(f"  ✅ Fixed URL for {company}")
         else:
             print(f"  ❌ Company not found: {company}")
-    
-    # Check for and report problematic URLs
-    print(f"\n🔍 Checking for problematic URLs...")
-    
-    problematic_patterns = [
-        'workforcenow.adp.com',
-        'jobs.gusto.com',
-        'applytojob.com',
-        'apply.workable.com',
-        'jobs.lever.co',
-        'ats.rippling.com',
-        'myworkdayjobs.com',
-        'rec.pro.ukg.net'
-    ]
-    
-    for pattern in problematic_patterns:
-        problematic_urls = df[df['Careers Site URL'].str.contains(pattern, na=False)]
-        if len(problematic_urls) > 0:
-            print(f"  ⚠️  Found {len(problematic_urls)} URLs with pattern '{pattern}':")
-            for _, row in problematic_urls.iterrows():
-                print(f"    - {row['Company']}: {row['Careers Site URL']}")
     
     # Save the cleaned CSV
     df.to_csv('companies_final_ready.csv', index=False)
