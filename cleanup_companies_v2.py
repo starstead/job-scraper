@@ -17,7 +17,7 @@ def clean_companies_csv():
         'Neat Capital',
         'Open Text', 
         'Orderly',
-        'Pithily'
+        'Pathify'
     ]
     
     print(f"\n🗑️ Removing {len(companies_to_remove)} companies:")
