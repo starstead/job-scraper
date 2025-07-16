@@ -2,8 +2,9 @@ name: Daily Job Scan
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 9 * * *'
+  push:
+    branches: [ main ]
+    paths: [ 'multiplatform_job_scraper.py', 'companies_final_ready.csv' ]
 
 permissions:
   contents: write
@@ -12,51 +13,85 @@ permissions:
 jobs:
   scan-jobs:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Set up Python
+      
+    - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
-    
+        python-version: '3.10'
+        
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install requests pandas beautifulsoup4 notion-client
-    
+        
     - name: Create results directory
       run: mkdir -p results
-    
-    - name: Run job scraper
+      
+    - name: Run multiplatform job scraper
       env:
         NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
       run: python multiplatform_job_scraper.py
-    
-    - name: Commit results
+      
+    - name: Upload results as artifact
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: job-scan-results
+        path: results/
+        retention-days: 30
+        
+    - name: Commit and push results
+      if: success()
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add results/ || true
         if ! git diff --staged --quiet; then
-          git commit -m "Daily job scan results $(date)"
+          git commit -m "🤖 Daily job scan results - $(date '+%Y-%m-%d %H:%M')"
           git push
         else
-          echo "No changes to commit"
+          echo "No new results to commit"
         fi
-    
-    - name: Create summary
+        
+    - name: Create job summary
+      if: always()
       run: |
-        echo "## 🎉 Daily Job Scan Results" >> $GITHUB_STEP_SUMMARY
-        echo "**Scan completed:** $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "## 🎯 Multi-Platform Job Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Scan Date:** $(date '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
         if [ -f results/multiplatform_scan.json ]; then
-          echo "**Results file:** results/multiplatform_scan.json" >> $GITHUB_STEP_SUMMARY
-          echo "**Jobs found:** $(grep -o '"total_jobs":[0-9]*' results/multiplatform_scan.json | cut -d':' -f2)" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Scan Statistics" >> $GITHUB_STEP_SUMMARY
+          total_jobs=$(grep -o '"total_jobs":[0-9]*' results/multiplatform_scan.json | cut -d':' -f2 || echo "0")
+          companies_scanned=$(grep -o '"companies_scanned":[0-9]*' results/multiplatform_scan.json | cut -d':' -f2 || echo "0")
+          new_jobs=$(grep -o '"new_jobs_added_to_notion":[0-9]*' results/multiplatform_scan.json | cut -d':' -f2 || echo "0")
+          duplicates=$(grep -o '"duplicates_skipped":[0-9]*' results/multiplatform_scan.json | cut -d':' -f2 || echo "0")
+          
+          echo "- **Companies Scanned:** $companies_scanned" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Jobs Found:** $total_jobs" >> $GITHUB_STEP_SUMMARY
+          echo "- **New Jobs Added to Notion:** $new_jobs" >> $GITHUB_STEP_SUMMARY
+          echo "- **Duplicates Skipped:** $duplicates" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Platform Breakdown" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          grep -A 10 '"platform_breakdown"' results/multiplatform_scan.json >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
         else
-          echo "**Status:** No results file generated" >> $GITHUB_STEP_SUMMARY
+          echo "❌ **No results file generated** - check workflow logs for errors" >> $GITHUB_STEP_SUMMARY
         fi
