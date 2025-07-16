@@ -166,8 +166,8 @@ class AbsenceSoftDebugScraper:
         # Load keywords
         keywords = self.load_keywords()
         
-        # AbsenceSoft URL (update this to the correct URL)
-        absencesoft_url = "https://www.absencesoft.com/careers"  # Update this!
+        # AbsenceSoft URL - UPDATE THIS LINE WITH THE CORRECT URL
+        absencesoft_url = "https://absencesoft.com/careers/#openings"  # ← Updated with correct URL
         
         print(f"\n🎯 Target URL: {absencesoft_url}")
         
