@@ -1,0 +1,48 @@
+name: Cleanup Companies and Debug
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleanup-and-debug:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        pip install pandas requests beautifulsoup4 notion-client
+        
+    - name: Run cleanup script v2
+      run: python cleanup_companies_v2.py
+      
+    - name: Debug AbsenceSoft with cleaned data
+      env:
+        NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+        NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+      run: python debug_absencesoft.py
+      
+    - name: Commit cleaned CSV
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add companies_final_ready.csv || true
+        if ! git diff --staged --quiet; then
+          git commit -m "🧹 Cleaned companies CSV - removed 4 companies and fixed URLs"
+          git push
+        else
+          echo "No changes to commit"
+        fi
+        
+    - name: Show cleanup summary
+      run: |
+        echo "## 🧹 Cleanup Complete!" >> $GITHUB_STEP_SUMMARY
+        echo "- Removed: Neat Capital, Open Text, Orderly, Pithily" >> $GITHUB_STEP_SUMMARY
+        echo "- Fixed ~25 broken URLs" >> $GITHUB_STEP_SUMMARY
+        echo "- Debugged AbsenceSoft for Product/Project Manager jobs" >> $GITHUB_STEP_SUMMARY
