@@ -65,35 +65,10 @@ class MultiPlatformJobScraper:
                 "program management", "Program Management"
             ]
     
-    def scrape_careers_page(self, url, keywords, company_name):
-        """Scrape company careers page (primary method)"""
-        try:
-            response = self.session.get(url, timeout=15)
-            response.raise_for_status()
-            
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Find job listings with various selectors
-            job_elements = soup.find_all(['div', 'article', 'section', 'li'], 
-                                       class_=re.compile(r'job|position|career|opening|listing', re.I))
-            
-            # If no specific job elements found, search entire page
-            if not job_elements:
-                job_elements = [soup]
-            
-            jobs_found = []
-            
-            for element in job_elements[:15]:  # Limit to 15 elements per page
-                element_text = element.get_text()
-                
-                # Enhanced keyword matching
-                found_keywords = self.check_keyword_match(element_text, keywords)
-                
-                # Categorize keywords  
-                core_keywords, modifier_keywords = self.categorize_keywords(found_keywords)
-            """Enhanced keyword matching with case-insensitive and flexible matching"""
-            text_lower = text.lower()
-            found_keywords = []
+    def check_keyword_match(self, text, keywords):
+        """Enhanced keyword matching with case-insensitive and flexible matching"""
+        text_lower = text.lower()
+        found_keywords = []
         
         for keyword in keywords:
             keyword_lower = keyword.lower()
@@ -104,7 +79,6 @@ class MultiPlatformJobScraper:
                 continue
             
             # Method 2: Word boundary matching for compound terms
-            # This helps catch "Product Management" even if keyword is "product manager"
             keyword_words = keyword_lower.split()
             if len(keyword_words) >= 2:
                 # Check if all words of the keyword appear in the text
@@ -134,6 +108,33 @@ class MultiPlatformJobScraper:
                 core_keywords.append(keyword)
         
         return core_keywords, modifier_keywords
+    
+    def scrape_careers_page(self, url, keywords, company_name):
+        """Scrape company careers page (primary method)"""
+        try:
+            response = self.session.get(url, timeout=15)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Find job listings with various selectors
+            job_elements = soup.find_all(['div', 'article', 'section', 'li'], 
+                                       class_=re.compile(r'job|position|career|opening|listing', re.I))
+            
+            # If no specific job elements found, search entire page
+            if not job_elements:
+                job_elements = [soup]
+            
+            jobs_found = []
+            
+            for element in job_elements[:15]:  # Limit to 15 elements per page
+                element_text = element.get_text()
+                
+                # Enhanced keyword matching
+                found_keywords = self.check_keyword_match(element_text, keywords)
+                
+                # Categorize keywords  
+                core_keywords, modifier_keywords = self.categorize_keywords(found_keywords)
                 
                 # Only process if we have core job keywords (not just remote/hybrid)
                 if core_keywords:
@@ -148,10 +149,10 @@ class MultiPlatformJobScraper:
                         lambda: element.find('a', string=re.compile(r'manager|engineer|analyst|director|specialist', re.I)),
                         # Strategy 3: Look for any heading with our keywords
                         lambda: next((h for h in element.find_all(['h1', 'h2', 'h3', 'h4', 'h5']) 
-                                     if any(kw in h.get_text().lower() for kw in core_keywords)), None),
+                                     if any(kw.lower() in h.get_text().lower() for kw in core_keywords)), None),
                         # Strategy 4: Look for any bold/strong text with keywords
                         lambda: next((b for b in element.find_all(['strong', 'b']) 
-                                     if any(kw in b.get_text().lower() for kw in core_keywords)), None),
+                                     if any(kw.lower() in b.get_text().lower() for kw in core_keywords)), None),
                         # Strategy 5: Generic heading
                         lambda: element.find(['h1', 'h2', 'h3', 'h4'])
                     ]
@@ -250,8 +251,8 @@ class MultiPlatformJobScraper:
             for card in job_cards[:6]:  # Limit to 6 jobs per company
                 try:
                     # CRITICAL: Verify this job is actually from the target company
-                    card_text = card.get_text().lower()
-                    if company_name.lower() not in card_text:
+                    card_text = card.get_text()
+                    if company_name.lower() not in card_text.lower():
                         continue  # Skip if not from our target company
                     
                     # Extract job title
@@ -268,16 +269,11 @@ class MultiPlatformJobScraper:
                     else:
                         job_url = url
                     
-                    # Improved keyword matching for Indeed
-                    found_keywords = []
-                    if keywords:
-                        for keyword in keywords:
-                            if keyword.lower() in card_text:
-                                found_keywords.append(keyword)
+                    # Enhanced keyword matching for Indeed
+                    found_keywords = self.check_keyword_match(card_text, keywords) if keywords else []
                     
                     # Apply same core keyword logic
-                    core_keywords = [kw for kw in found_keywords if kw not in ['remote', 'hybrid']]
-                    modifier_keywords = [kw for kw in found_keywords if kw in ['remote', 'hybrid']]
+                    core_keywords, modifier_keywords = self.categorize_keywords(found_keywords)
                     
                     # Only add if we have core job keywords (not just remote)
                     if core_keywords:
@@ -370,8 +366,8 @@ class MultiPlatformJobScraper:
             for card in job_cards[:3]:  # Limit to 3 jobs
                 try:
                     # CRITICAL: Verify this job is from the target company
-                    card_text = card.get_text().lower()
-                    if company_name.lower() not in card_text:
+                    card_text = card.get_text()
+                    if company_name.lower() not in card_text.lower():
                         continue  # Skip if not from our target company
                     
                     title_elem = card.find(['a', 'h2'], class_=re.compile(r'job.*title', re.I))
@@ -593,6 +589,8 @@ class MultiPlatformJobScraper:
                 return True, "partial_title"
         
         return False, None
+    
+    def add_job_to_notion(self, notion, database_id, job_data):
         """Add a single job to Notion database"""
         try:
             new_page = {
