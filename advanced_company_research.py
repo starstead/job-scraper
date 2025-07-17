@@ -406,4 +406,238 @@ class AdvancedCompanyResearcher:
         for url in potential_urls:
             try:
                 response = self.session.get(url, timeout=5)
-                if response
+                if response.status_code == 200:
+                    # Check if it looks like a careers page
+                    content = response.text.lower()
+                    career_indicators = ['job', 'career', 'position', 'hiring', 'apply', 'openings', 'opportunities']
+                    if any(indicator in content for indicator in career_indicators):
+                        return url
+            except:
+                continue
+        
+        return None
+    
+    def run_comprehensive_research(self):
+        """Run comprehensive company research"""
+        print("🔍 Starting comprehensive company research...")
+        
+        all_companies = []
+        
+        # Research methods
+        research_methods = [
+            ('Built In Colorado', lambda: self.scrape_built_in_companies('colorado')),
+            ('Arts Technology', self.research_arts_tech_ecosystem),
+            ('Global Fintech', self.research_global_fintech_ecosystem),
+            ('Public Safety', self.research_public_safety_ecosystem)
+        ]
+        
+        # Run each research method
+        for method_name, method_func in research_methods:
+            try:
+                print(f"\n📊 Running {method_name} research...")
+                companies = method_func()
+                all_companies.extend(companies)
+                print(f"✅ {method_name}: {len(companies)} companies found")
+                time.sleep(3)  # Rate limiting between methods
+            except Exception as e:
+                print(f"❌ Error in {method_name} research: {e}")
+                continue
+        
+        # Validate careers pages
+        if all_companies:
+            all_companies = self.validate_careers_pages(all_companies)
+        
+        return all_companies
+    
+    def analyze_and_categorize_companies(self, companies):
+        """Analyze companies and categorize by relevance"""
+        print("📈 Analyzing and categorizing companies...")
+        
+        # Add relevance scoring
+        for company in companies:
+            company['relevance_score'] = self.calculate_relevance_score(company)
+            company['recommended_for'] = self.get_recommendation(company)
+        
+        # Sort by relevance score
+        companies.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
+        
+        return companies
+    
+    def calculate_relevance_score(self, company):
+        """Calculate relevance score based on company attributes"""
+        score = 0
+        
+        description = company.get('description', '').lower()
+        industry = company.get('industry', '').lower()
+        company_name = company.get('company_name', '').lower()
+        
+        # Anne's interests (arts, events, EdTech adjacent)
+        anne_keywords = [
+            'event', 'ticket', 'arts', 'cultural', 'museum', 'theater', 'music',
+            'nonprofit', 'education', 'university', 'student', 'learning',
+            'venue', 'patron', 'audience', 'performance'
+        ]
+        
+        # Alessandro's interests (global, fintech, public safety, European)
+        alessandro_keywords = [
+            'global', 'international', 'payment', 'fintech', 'money', 'transfer',
+            'compliance', 'aml', 'kyc', 'european', 'german', 'italian',
+            'public safety', 'emergency', 'government', 'security', 'defense'
+        ]
+        
+        # Calculate scores
+        for keyword in anne_keywords:
+            if keyword in description or keyword in industry or keyword in company_name:
+                score += 1
+        
+        for keyword in alessandro_keywords:
+            if keyword in description or keyword in industry or keyword in company_name:
+                score += 1
+        
+        # Bonus for validated careers page
+        if company.get('careers_validated'):
+            score += 2
+        
+        # Bonus for location relevance
+        if company.get('location') in ['Denver', 'Colorado', 'Boulder']:
+            score += 1
+        
+        return score
+    
+    def get_recommendation(self, company):
+        """Get recommendation for who should focus on this company"""
+        description = company.get('description', '').lower()
+        industry = company.get('industry', '').lower()
+        focus_area = company.get('focus_area', '')
+        
+        if focus_area:
+            return focus_area
+        
+        # Determine based on keywords
+        anne_indicators = ['event', 'ticket', 'arts', 'cultural', 'education', 'nonprofit']
+        alessandro_indicators = ['fintech', 'payment', 'global', 'security', 'government', 'compliance']
+        
+        anne_score = sum(1 for keyword in anne_indicators if keyword in description or keyword in industry)
+        alessandro_score = sum(1 for keyword in alessandro_indicators if keyword in description or keyword in industry)
+        
+        if anne_score > alessandro_score:
+            return 'anne_focus'
+        elif alessandro_score > anne_score:
+            return 'alessandro_focus'
+        else:
+            return 'both'
+    
+    def save_research_results(self, companies):
+        """Save comprehensive research results"""
+        if not companies:
+            print("❌ No companies found to save")
+            return
+        
+        print("💾 Saving research results...")
+        
+        # Create research directory
+        os.makedirs('research_results', exist_ok=True)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # Create DataFrame
+        df = pd.DataFrame(companies)
+        
+        # Save detailed research results
+        detailed_file = f'research_results/detailed_company_research_{timestamp}.csv'
+        df.to_csv(detailed_file, index=False)
+        
+        # Create integration-ready format
+        integration_df = df.copy()
+        integration_df['Company'] = integration_df['company_name']
+        integration_df['Careers Site URL'] = integration_df['careers_url']
+        integration_df['Industry'] = integration_df['industry']
+        integration_df['Primary_Source'] = 'careers_page'
+        integration_df['Company_Size'] = 'Medium'  # Default
+        integration_df['City'] = integration_df.get('location', 'Denver')
+        
+        # Filter companies with valid careers pages
+        valid_companies = integration_df[integration_df['careers_validated'] == True]
+        
+        # Save integration file
+        integration_columns = ['Company', 'Careers Site URL', 'Industry', 'Primary_Source', 'Company_Size', 'City']
+        integration_file = f'research_results/companies_to_integrate_{timestamp}.csv'
+        valid_companies[integration_columns].to_csv(integration_file, index=False)
+        
+        # Create prioritized recommendations
+        anne_companies = df[df['recommended_for'].isin(['anne_focus', 'both'])].head(20)
+        alessandro_companies = df[df['recommended_for'].isin(['alessandro_focus', 'both'])].head(20)
+        
+        anne_file = f'research_results/anne_recommended_companies_{timestamp}.csv'
+        alessandro_file = f'research_results/alessandro_recommended_companies_{timestamp}.csv'
+        
+        anne_companies.to_csv(anne_file, index=False)
+        alessandro_companies.to_csv(alessandro_file, index=False)
+        
+        # Create comprehensive summary
+        summary = {
+            'research_date': datetime.now().isoformat(),
+            'total_companies_researched': len(companies),
+            'companies_with_careers_pages': len(valid_companies),
+            'anne_focused_companies': len(anne_companies),
+            'alessandro_focused_companies': len(alessandro_companies),
+            'top_anne_companies': [
+                {
+                    'name': row['company_name'],
+                    'industry': row['industry'],
+                    'score': row['relevance_score'],
+                    'why_relevant': row.get('why_relevant', 'Industry match')
+                }
+                for _, row in anne_companies.head(5).iterrows()
+            ],
+            'top_alessandro_companies': [
+                {
+                    'name': row['company_name'],
+                    'industry': row['industry'], 
+                    'score': row['relevance_score'],
+                    'why_relevant': row.get('why_relevant', 'Industry match')
+                }
+                for _, row in alessandro_companies.head(5).iterrows()
+            ],
+            'research_sources': list(set(df['source'].tolist())),
+            'files_created': {
+                'detailed_research': detailed_file,
+                'integration_ready': integration_file,
+                'anne_recommendations': anne_file,
+                'alessandro_recommendations': alessandro_file
+            }
+        }
+        
+        summary_file = f'research_results/research_summary_{timestamp}.json'
+        with open(summary_file, 'w') as f:
+            json.dump(summary, f, indent=2)
+        
+        # Print results
+        print(f"\n🎉 RESEARCH COMPLETE!")
+        print(f"📊 Total companies researched: {summary['total_companies_researched']}")
+        print(f"✅ Companies with careers pages: {summary['companies_with_careers_pages']}")
+        print(f"🎭 Anne-focused companies: {summary['anne_focused_companies']}")
+        print(f"🌍 Alessandro-focused companies: {summary['alessandro_focused_companies']}")
+        
+        print(f"\n🏆 Top recommendations for Anne:")
+        for company in summary['top_anne_companies']:
+            print(f"  • {company['name']} ({company['industry']}) - Score: {company['score']}")
+        
+        print(f"\n🏆 Top recommendations for Alessandro:")
+        for company in summary['top_alessandro_companies']:
+            print(f"  • {company['name']} ({company['industry']}) - Score: {company['score']}")
+        
+        print(f"\n📁 Files created:")
+        for file_type, filename in summary['files_created'].items():
+            print(f"  • {file_type}: {filename}")
+        
+        return summary
+
+if __name__ == "__main__":
+    researcher = AdvancedCompanyResearcher()
+    companies = researcher.run_comprehensive_research()
+    
+    if companies:
+        companies = researcher.analyze_and_categorize_companies(companies)
+        summary = researcher.save_research_results(companies)
+    else:
+        print("❌ No companies found during research")
