@@ -600,8 +600,8 @@ class MultiPlatformJobScraper:
         companies_scanned = 0
         new_jobs_added = 0
         
-        # Full scan of all companies
-        companies_to_scan = companies
+        # Test with first 50 companies
+        companies_to_scan = companies[:50]  
         
         for company_data in companies_to_scan:
             try:
