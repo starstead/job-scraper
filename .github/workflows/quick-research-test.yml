@@ -1,0 +1,30 @@
+name: Quick Research Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - run: pip install pandas
+    - run: mkdir -p research_results
+    - name: Run quick test
+      run: python simple_research_test.py
+    - name: Show results
+      run: |
+        echo "## 🎯 Quick Research Results" >> $GITHUB_STEP_SUMMARY
+        if [ -f research_results/targeted_companies_ready_to_integrate.csv ]; then
+          echo "### Companies Found:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          head -n 10 research_results/targeted_companies_ready_to_integrate.csv >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        fi
+    - uses: actions/upload-artifact@v4
+      with:
+        name: quick-research-results
+        path: research_results/
