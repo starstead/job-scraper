@@ -1,18 +1,130 @@
 {
-  "scan_date": "2025-07-17T17:15:39.689766",
-  "companies_scanned": 50,
-  "total_jobs": 2,
-  "new_jobs_added_to_notion": 2,
+  "scan_date": "2025-07-17T21:59:41.655450",
+  "companies_scanned": 242,
+  "total_jobs": 22,
+  "new_jobs_added_to_notion": 16,
   "platform_breakdown": {
-    "careers": 2,
+    "careers": 22,
     "indeed": 0,
     "angellist": 0,
     "glassdoor": 0
   },
   "jobs": [
     {
+      "title": "Group Product Manager",
+      "url": "https://absencesoft.com/careers/#openings",
+      "keywords_found": [
+        "product manager",
+        "Product Manager",
+        "group product manager",
+        "Group Product Manager"
+      ],
+      "source": "Careers Page",
+      "company": "AbsenceSoft",
+      "industry": "Software & Services",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "e1cdc804d9436593"
+    },
+    {
+      "title": "Project Manager",
+      "url": "https://absencesoft.com/careers/#openings",
+      "keywords_found": [
+        "project manager",
+        "Project Manager"
+      ],
+      "source": "Careers Page",
+      "company": "AbsenceSoft",
+      "industry": "Software & Services",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "a7b5ee6eba9afd30"
+    },
+    {
+      "title": "Product Manager",
+      "url": "https://absencesoft.com/careers/#openings",
+      "keywords_found": [
+        "product manager",
+        "Product Manager"
+      ],
+      "source": "Careers Page",
+      "company": "AbsenceSoft",
+      "industry": "Software & Services",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "52445e361e3e8dd3"
+    },
+    {
       "title": "Careers",
-      "url": "https://datadoghq.com",
+      "url": "https://www.besmartee.com/careers/#jobs",
+      "keywords_found": [
+        "product owner",
+        "Product Owner",
+        "remote"
+      ],
+      "source": "Careers Page",
+      "company": "BeSmartee",
+      "industry": "Fintech",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "3b5b0ceaa2a42b4d"
+    },
+    {
+      "title": "Senior Product Manager, Retail Mortgage",
+      "url": "https://jobs.lever.co/better/fadac419-bea9-4058-b38f-8d0144302ffb",
+      "keywords_found": [
+        "product manager",
+        "Product Manager",
+        "senior product manager",
+        "Senior Product Manager",
+        "product management",
+        "Product Management",
+        "project manager",
+        "Project Manager",
+        "technical project manager",
+        "Technical Project Manager",
+        "remote",
+        "hybrid"
+      ],
+      "source": "Careers Page",
+      "company": "Better",
+      "industry": "Fintech",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "33523ba6845880e1"
+    },
+    {
+      "title": "Product Management",
+      "url": "https://bombora.com/about/careers",
+      "keywords_found": [
+        "product management",
+        "Product Management",
+        "remote"
+      ],
+      "source": "Careers Page",
+      "company": "Bombora",
+      "industry": "Marketing Technology",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "f7cecd2db4bc2f98"
+    },
+    {
+      "title": "Technical Business Analyst",
+      "url": "https://burstiq.com/technical-business-analyst/",
+      "keywords_found": [
+        "business analyst",
+        "Business Analyst"
+      ],
+      "source": "Careers Page",
+      "company": "burstIQ",
+      "industry": "Analytics & AI",
+      "company_size": "Small",
+      "scan_date": "2025-07-17",
+      "unique_id": "34c359518119a530"
+    },
+    {
+      "title": "Careers",
+      "url": "https://www.datadoghq.com/",
       "keywords_found": [
         "product management",
         "Product Management",
@@ -24,11 +136,26 @@
       "industry": "Analytics & AI",
       "company_size": "Large",
       "scan_date": "2025-07-17",
-      "unique_id": "cdc41e96be5c313f"
+      "unique_id": "fa21cfbfcd942840"
+    },
+    {
+      "title": "Your AI Legal Assistant Inside Filevine",
+      "url": "https://www.lexsummit.com/",
+      "keywords_found": [
+        "product manager",
+        "Product Manager",
+        "remote"
+      ],
+      "source": "Careers Page",
+      "company": "Filevine",
+      "industry": "Software & Services",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "d5656b10b831850f"
     },
     {
       "title": "Land Products, Programs & Services",
-      "url": "https://gdmissionsystems.com/careers/job-search?state=eyJ3aGF0IjoiI3NkYWdyb3VuZCIsImFkZHJlc3MiOltdLCJmYWNldHMiOltdfQ%3D%3D",
+      "url": "https://gdmissionsystems.com/",
       "keywords_found": [
         "project manager",
         "Project Manager",
@@ -39,7 +166,202 @@
       "industry": "Public Safety",
       "company_size": "Large",
       "scan_date": "2025-07-17",
-      "unique_id": "121c5a9c63c2b0f1"
+      "unique_id": "de690f8226b2ca8f"
+    },
+    {
+      "title": "DevOps Project Manager",
+      "url": "https://apply.workable.com/j/35B3F53C91",
+      "keywords_found": [
+        "project manager",
+        "Project Manager",
+        "implementation manager",
+        "Implementation Manager",
+        "remote",
+        "hybrid"
+      ],
+      "source": "Careers Page",
+      "company": "Kaseware",
+      "industry": "Public Safety",
+      "company_size": "Small",
+      "scan_date": "2025-07-17",
+      "unique_id": "e0d068b51d274038"
+    },
+    {
+      "title": "At Lendesk WeValue You",
+      "url": "https://lendesk.com",
+      "keywords_found": [
+        "product manager",
+        "Product Manager",
+        "senior product manager",
+        "Senior Product Manager",
+        "remote"
+      ],
+      "source": "Careers Page",
+      "company": "Lendesk",
+      "industry": "Fintech",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "4b02ff2c113024e9"
+    },
+    {
+      "title": "Product Manager",
+      "url": "https://www.magnetforensics.com/wp-content/uploads/2024/10/Employee-and-Job-Applicant-Privacy-Notice-09-26-2024.pdf",
+      "keywords_found": [
+        "product manager",
+        "Product Manager",
+        "product management",
+        "Product Management",
+        "program manager",
+        "Program Manager",
+        "business analyst",
+        "Business Analyst",
+        "product operations manager"
+      ],
+      "source": "Careers Page",
+      "company": "Magnet Forensics",
+      "industry": "Public Safety",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "083c8fef729873e7"
+    },
+    {
+      "title": "Modern Tools, Safer Communities: Technology\u2019s Role in Alternative Response",
+      "url": "https://mark43.com",
+      "keywords_found": [
+        "product manager",
+        "Product Manager",
+        "senior product manager",
+        "Senior Product Manager",
+        "program manager",
+        "Program Manager",
+        "technical program manager",
+        "Technical Program Manager",
+        "remote",
+        "hybrid"
+      ],
+      "source": "Careers Page",
+      "company": "Mark43",
+      "industry": "Public Safety",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "cc35c163a0c6f0f4"
+    },
+    {
+      "title": "Careers at Navigator",
+      "url": "https://www.nbs-us.com/",
+      "keywords_found": [
+        "project management",
+        "Project Management"
+      ],
+      "source": "Careers Page",
+      "company": "Navigator Business Solutions",
+      "industry": "Enterprise Software",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "32c95cca83dcefea"
+    },
+    {
+      "title": "We\u2019re on a mission to stop financial crime",
+      "url": "https://www.sardine.ai/sardine-con",
+      "keywords_found": [
+        "product manager",
+        "Product Manager",
+        "remote"
+      ],
+      "source": "Careers Page",
+      "company": "Sardine",
+      "industry": "Cybersecurity",
+      "company_size": "Small",
+      "scan_date": "2025-07-17",
+      "unique_id": "a5c484eff461e812"
+    },
+    {
+      "title": "Careers at Sunbit.",
+      "url": "https://sunbit.com/how-it-works/",
+      "keywords_found": [
+        "product manager",
+        "Product Manager",
+        "senior product manager",
+        "Senior Product Manager"
+      ],
+      "source": "Careers Page",
+      "company": "Sunbit",
+      "industry": "Fintech",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "47f0cd8343056666"
+    },
+    {
+      "title": "Job Openings",
+      "url": "https://www.switchautomation.com/careers/",
+      "keywords_found": [
+        "project manager",
+        "Project Manager",
+        "remote"
+      ],
+      "source": "Careers Page",
+      "company": "Switch Automation",
+      "industry": "Software & Services",
+      "company_size": "Small",
+      "scan_date": "2025-07-17",
+      "unique_id": "47be77f26a514a53"
+    },
+    {
+      "title": "Working at TeamSnap",
+      "url": "https://jobs.lever.co/teamsnap",
+      "keywords_found": [
+        "project manager",
+        "Project Manager",
+        "remote"
+      ],
+      "source": "Careers Page",
+      "company": "Team Snap",
+      "industry": "Other",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "6bb48263ea991a80"
+    },
+    {
+      "title": "Our people are the beat at the heart of TTEC",
+      "url": "https://www.ttec.com/careers",
+      "keywords_found": [
+        "project management",
+        "Project Management"
+      ],
+      "source": "Careers Page",
+      "company": "Ttec",
+      "industry": "Communications",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "814bdf7a69d2c527"
+    },
+    {
+      "title": "Toggle",
+      "url": "https://www.usertesting.com/",
+      "keywords_found": [
+        "product management",
+        "Product Management"
+      ],
+      "source": "Careers Page",
+      "company": "User Testing",
+      "industry": "Software & Services",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "d2875dbe4fc10ad7"
+    },
+    {
+      "title": "Sagitec Careers",
+      "url": "https://www.sagitec.com//www.sagitec.com?hsLang=en-au",
+      "keywords_found": [
+        "program management",
+        "Program Management"
+      ],
+      "source": "Careers Page",
+      "company": "Sagitec",
+      "industry": "Software & Services",
+      "company_size": "Medium",
+      "scan_date": "2025-07-17",
+      "unique_id": "8ad10704a4f765fc"
     }
   ]
 }
