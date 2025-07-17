@@ -74,12 +74,10 @@ class MultiPlatformJobScraper:
             
             # Strategy 1: Look for job cards with specific patterns
             job_card_selectors = [
-                # Common job card patterns
                 ['div', {'class': re.compile(r'job.*card|position.*card|career.*card', re.I)}],
                 ['article', {'class': re.compile(r'job|position|career', re.I)}],
                 ['section', {'class': re.compile(r'job|position|career', re.I)}],
                 ['li', {'class': re.compile(r'job|position|career', re.I)}],
-                # Generic containers that might hold individual jobs
                 ['div', {'class': re.compile(r'opening|listing|posting', re.I)}],
             ]
             
@@ -87,22 +85,16 @@ class MultiPlatformJobScraper:
                 elements = soup.find_all(tag, attrs)
                 if elements:
                     job_elements.extend(elements)
-                    print(f"Found {len(elements)} job elements using {tag} with {attrs}")
+                    print(f"Found {len(elements)} job elements using {tag}")
             
             # Strategy 2: If no job cards found, look for headings and build job elements around them
             if not job_elements:
                 print("No job cards found, trying heading-based detection...")
-                
-                # Find all headings that look like job titles
                 job_headings = soup.find_all(['h1', 'h2', 'h3', 'h4'], 
-                                           string=re.compile(r'manager|analyst|director|specialist|engineer|coordinator', re.I))
-                
-                print(f"Found {len(job_headings)} potential job headings")
+                                           string=re.compile(r'manager|analyst|director|specialist|engineer', re.I))
                 
                 for heading in job_headings:
-                    # For each job heading, find its logical container
-                    # Try to find a parent that contains job info but not other jobs
-                    for parent_level in [1, 2, 3]:  # Try different parent levels
+                    for parent_level in [1, 2, 3]:
                         container = heading
                         for _ in range(parent_level):
                             container = container.find_parent()
@@ -110,167 +102,117 @@ class MultiPlatformJobScraper:
                                 break
                         
                         if container:
-                            # Check if this container has a reasonable amount of text (job description)
                             container_text = container.get_text().strip()
-                            if 50 < len(container_text) < 2000:  # Reasonable job description length
+                            if 50 < len(container_text) < 2000:
                                 job_elements.append(container)
-                                print(f"Added job element around heading: {heading.get_text()[:50]}")
                                 break
             
-            # Strategy 3: If still no elements, try to split the page by job sections
+            # Strategy 3: Fallback to whole page
             if not job_elements:
-                print("Trying to split page by job sections...")
-                
-                # Look for patterns that separate jobs (like "Apply Now" buttons or section dividers)
-                page_content = soup.get_text()
-                
-                # Split by common job separators
-                separators = ['Apply Now', 'View Job', 'Learn More', 'Read More']
-                potential_jobs = []
-                
-                for separator in separators:
-                    if separator in page_content:
-                        # This is a more complex approach - for now, fall back to whole page
-                        break
-                
-                # Fallback: use whole page but try to be smarter about title extraction
                 job_elements = [soup]
                 print("Using whole page as single element (fallback)")
             
-            # Remove duplicates and sort by position on page
+            # Remove duplicates
             unique_elements = []
             for element in job_elements:
                 if element not in unique_elements:
                     unique_elements.append(element)
             
-            job_elements = unique_elements
-            print(f"Final job elements count: {len(job_elements)}")
+            job_elements = unique_elements[:5]  # Limit to 5 elements for speed
+            print(f"Processing {len(job_elements)} job elements")
             
             jobs_found = []
             
-            # Speed optimization: Limit job elements processed
-        for element in job_elements[:5]:  # Process max 5 job elements per company
-                element_text = element.get_text().lower()
-                
-                # Check for keyword matches
-                found_keywords = []
-                for keyword in keywords:
-                    if keyword.lower() in element_text:
-                        found_keywords.append(keyword)
-                
-                # Separate core job keywords from modifiers  
-                core_keywords = [kw for kw in found_keywords if kw.lower() not in ['remote', 'hybrid']]
-                modifier_keywords = [kw for kw in found_keywords if kw.lower() in ['remote', 'hybrid']]
-                
-                # Only process if we have core job keywords (not just remote/hybrid)
-                if core_keywords:
-                    # Enhanced job title extraction with multiple strategies
-                    title = "Job Opening"  # Default
-                    title_found = False
+            for element in job_elements:
+                try:
+                    element_text = element.get_text().lower()
                     
-                    # Strategy 1: Look for exact keyword matches in headings
-                    for keyword in core_keywords:
-                        if title_found:
-                            break
-                        # Try to find headings that contain this specific keyword
-                        keyword_headings = element.find_all(['h1', 'h2', 'h3', 'h4', 'h5'])
-                        for heading in keyword_headings:
-                            heading_text = heading.get_text().strip()
-                            if keyword.lower() in heading_text.lower() and len(heading_text) > 5:
-                                # Make sure this heading is actually a job title (not navigation or other text)
-                                if any(job_word in heading_text.lower() for job_word in ['manager', 'analyst', 'director', 'specialist', 'engineer', 'coordinator']):
-                                    title = heading_text
-                                    title_found = True
-                                    print(f"Found title using keyword '{keyword}': {title}")
-                                    break
+                    # Check for keyword matches
+                    found_keywords = []
+                    for keyword in keywords:
+                        if keyword.lower() in element_text:
+                            found_keywords.append(keyword)
                     
-                    # Strategy 2: Look for job-specific CSS classes
-                    if not title_found:
-                        title_selectors = [
-                            ['h1', 'h2', 'h3', 'h4'],  # Try all heading levels
-                            ['span', 'div'],           # Sometimes titles are in spans or divs
-                            ['a']                      # Sometimes titles are links
-                        ]
+                    # Separate core job keywords from modifiers  
+                    core_keywords = [kw for kw in found_keywords if kw.lower() not in ['remote', 'hybrid']]
+                    modifier_keywords = [kw for kw in found_keywords if kw.lower() in ['remote', 'hybrid']]
+                    
+                    # Only process if we have core job keywords
+                    if core_keywords:
+                        # Enhanced job title extraction
+                        title = "Job Opening"
+                        title_found = False
                         
-                        for tag_list in title_selectors:
+                        # Strategy 1: Look for exact keyword matches in headings
+                        for keyword in core_keywords:
                             if title_found:
                                 break
-                            title_elements = element.find_all(tag_list, class_=re.compile(r'job.*title|title.*job|position.*title|role.*title', re.I))
+                            keyword_headings = element.find_all(['h1', 'h2', 'h3', 'h4', 'h5'])
+                            for heading in keyword_headings:
+                                heading_text = heading.get_text().strip()
+                                if keyword.lower() in heading_text.lower() and len(heading_text) > 5:
+                                    if any(job_word in heading_text.lower() for job_word in ['manager', 'analyst', 'director', 'specialist']):
+                                        title = heading_text
+                                        title_found = True
+                                        break
+                        
+                        # Strategy 2: Look for job-specific CSS classes
+                        if not title_found:
+                            title_elements = element.find_all(['h1', 'h2', 'h3', 'h4'], 
+                                                            class_=re.compile(r'job.*title|title.*job|position.*title', re.I))
                             if title_elements:
                                 title = title_elements[0].get_text().strip()
                                 if len(title) > 5:
                                     title_found = True
-                                    print(f"Found title using CSS class: {title}")
+                        
+                        # Strategy 3: Look for strong/bold text with keywords
+                        if not title_found:
+                            strong_elements = element.find_all(['strong', 'b', 'h1', 'h2', 'h3', 'h4'])
+                            for strong_elem in strong_elements:
+                                strong_text = strong_elem.get_text().strip()
+                                if any(keyword.lower() in strong_text.lower() for keyword in core_keywords):
+                                    if 5 < len(strong_text) < 100:
+                                        title = strong_text
+                                        title_found = True
+                                        break
+                        
+                        # Strategy 4: Fallback to first reasonable heading
+                        if not title_found:
+                            all_headings = element.find_all(['h1', 'h2', 'h3', 'h4'])
+                            for heading in all_headings:
+                                heading_text = heading.get_text().strip()
+                                if 5 < len(heading_text) < 100:
+                                    title = heading_text
                                     break
-                    
-                    # Strategy 3: Look for strong/bold text that contains job keywords
-                    if not title_found:
-                        strong_elements = element.find_all(['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5'])
-                        for strong_elem in strong_elements:
-                            strong_text = strong_elem.get_text().strip()
-                            if any(keyword.lower() in strong_text.lower() for keyword in core_keywords):
-                                if len(strong_text) > 5 and len(strong_text) < 100:  # Reasonable title length
-                                    title = strong_text
-                                    title_found = True
-                                    print(f"Found title in strong/heading: {title}")
-                                    break
-                    
-                    # Strategy 4: Fallback to first heading that makes sense
-                    if not title_found:
-                        all_headings = element.find_all(['h1', 'h2', 'h3', 'h4', 'h5'])
-                        for heading in all_headings:
-                            heading_text = heading.get_text().strip()
-                            if len(heading_text) > 5 and len(heading_text) < 100:
-                                title = heading_text
-                                print(f"Found title using fallback heading: {title}")
-                                break
-                    
-                    # Clean up title
-                    title = re.sub(r'\s+', ' ', title.replace('\n', ' ').replace('\t', ' '))
-                    
-                    # Extract job URL with better logic
-                    job_url = url  # Default to page URL
-                    
-                    # Look for job-specific URLs
-                    url_strategies = [
-                        # Strategy 1: Look for "Apply Now" or similar buttons
-                        lambda: element.find('a', href=True, string=re.compile(r'apply|view.*job|see.*detail|learn.*more', re.I)),
-                        # Strategy 2: Look for links with job-related href patterns
-                        lambda: element.find('a', href=re.compile(r'job|position|career|apply|vacancy', re.I)),
-                        # Strategy 3: Look for any link that might be job-related
-                        lambda: element.find('a', href=True, class_=re.compile(r'job|apply|view', re.I)),
-                        # Strategy 4: First link in the element
-                        lambda: element.find('a', href=True)
-                    ]
-                    
-                    for strategy in url_strategies:
-                        try:
-                            link_element = strategy()
-                            if link_element and link_element.get('href'):
-                                href = link_element['href']
-                                # Make relative URLs absolute
-                                if href.startswith('/'):
-                                    base_url = '/'.join(url.split('/')[:3])
-                                    job_url = base_url + href
-                                elif href.startswith('http'):
-                                    job_url = href
-                                else:
-                                    base_url = '/'.join(url.split('/')[:3])
-                                    job_url = base_url + '/' + href
-                                break
-                        except:
+                        
+                        # Clean up title
+                        title = re.sub(r'\s+', ' ', title.replace('\n', ' ').replace('\t', ' '))
+                        
+                        # Extract job URL
+                        job_url = url
+                        link_element = element.find('a', href=True)
+                        if link_element:
+                            href = link_element['href']
+                            if href.startswith('/'):
+                                base_url = '/'.join(url.split('/')[:3])
+                                job_url = base_url + href
+                            elif href.startswith('http'):
+                                job_url = href
+                        
+                        # Skip if title is too generic
+                        if len(title.strip()) < 5 or title.strip().lower() in ['job opening', 'learn more', 'apply']:
                             continue
-                    
-                    # Skip if we couldn't get a decent title
-                    if len(title.strip()) < 5 or title.strip().lower() in ['job opening', 'learn more', 'read more', 'apply', 'apply now']:
-                        continue
-                    
-                    jobs_found.append({
-                        'title': title[:100],
-                        'url': job_url,
-                        'keywords_found': core_keywords + modifier_keywords,
-                        'source': 'Careers Page'
-                    })
+                        
+                        jobs_found.append({
+                            'title': title[:100],
+                            'url': job_url,
+                            'keywords_found': core_keywords + modifier_keywords,
+                            'source': 'Careers Page'
+                        })
+                
+                except Exception as e:
+                    print(f"Error processing element: {e}")
+                    continue
             
             return jobs_found
             
@@ -279,9 +221,8 @@ class MultiPlatformJobScraper:
             return []
     
     def scrape_indeed_company(self, company_name, location="Denver,CO", keywords=None):
-        """Scrape Indeed for specific company jobs - EXACT COMPANY ONLY"""
+        """Scrape Indeed for specific company jobs"""
         try:
-            # Build Indeed search URL for exact company
             query = f'company:"{company_name}"'
             url = f"https://www.indeed.com/jobs?q={query.replace(' ', '+')}&l={location}"
             
@@ -290,47 +231,39 @@ class MultiPlatformJobScraper:
                 return []
             
             soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Indeed job selectors
             job_cards = soup.find_all(['div'], attrs={'data-jk': True})
             if not job_cards:
                 job_cards = soup.find_all(['div'], class_=re.compile(r'job.*card|listing', re.I))
             
             jobs_found = []
             
-            for card in job_cards[:6]:  # Limit to 6 jobs per company
+            for card in job_cards[:6]:
                 try:
-                    # CRITICAL: Verify this job is actually from the target company
                     card_text = card.get_text().lower()
                     if company_name.lower() not in card_text:
-                        continue  # Skip if not from our target company
+                        continue
                     
-                    # Extract job title
                     title_elem = card.find(['h2', 'a'], attrs={'data-testid': 'job-title'})
                     if not title_elem:
                         title_elem = card.find(['h2', 'a'])
                     
                     title = title_elem.get_text().strip() if title_elem else "Indeed Job"
                     
-                    # Extract job URL
                     link_elem = card.find('a', href=True)
                     if link_elem and '/viewjob' in link_elem['href']:
                         job_url = "https://www.indeed.com" + link_elem['href']
                     else:
                         job_url = url
                     
-                    # Keyword matching for Indeed
                     found_keywords = []
                     if keywords:
                         for keyword in keywords:
                             if keyword.lower() in card_text:
                                 found_keywords.append(keyword)
                     
-                    # Apply same core keyword logic
                     core_keywords = [kw for kw in found_keywords if kw.lower() not in ['remote', 'hybrid']]
                     modifier_keywords = [kw for kw in found_keywords if kw.lower() in ['remote', 'hybrid']]
                     
-                    # Only add if we have core job keywords (not just remote)
                     if core_keywords:
                         jobs_found.append({
                             'title': title[:100],
@@ -346,108 +279,6 @@ class MultiPlatformJobScraper:
             
         except Exception as e:
             print(f"  Error scraping Indeed: {str(e)[:50]}")
-            return []
-    
-    def scrape_angellist_company(self, company_name):
-        """Scrape AngelList for startup jobs - EXACT COMPANY ONLY"""
-        try:
-            # Convert company name to AngelList slug format
-            company_slug = re.sub(r'[^a-zA-Z0-9-]', '', 
-                                company_name.lower().replace(' ', '-').replace('.', ''))
-            url = f"https://angel.co/company/{company_slug}/jobs"
-            
-            response = self.session.get(url, timeout=10)
-            if response.status_code != 200:
-                return []
-            
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Verify we're on the correct company page
-            page_text = soup.get_text().lower()
-            if company_name.lower() not in page_text:
-                return []  # Not the right company page
-            
-            # AngelList job selectors
-            job_elements = soup.find_all(['div', 'article'], 
-                                       class_=re.compile(r'job|listing|position', re.I))
-            
-            jobs_found = []
-            
-            for element in job_elements[:4]:  # Limit to 4 jobs
-                try:
-                    title_elem = element.find(['h1', 'h2', 'h3', 'a'])
-                    title = title_elem.get_text().strip() if title_elem else "AngelList Job"
-                    
-                    link_elem = element.find('a', href=True)
-                    job_url = link_elem['href'] if link_elem else url
-                    
-                    if job_url.startswith('/'):
-                        job_url = "https://angel.co" + job_url
-                    
-                    jobs_found.append({
-                        'title': title[:100],
-                        'url': job_url,
-                        'keywords_found': ['startup', 'angellist'],
-                        'source': 'AngelList'
-                    })
-                    
-                except Exception as e:
-                    continue
-            
-            return jobs_found
-            
-        except Exception as e:
-            print(f"  Error scraping AngelList: {str(e)[:50]}")
-            return []
-    
-    def scrape_glassdoor_company(self, company_name, location="Denver, CO"):
-        """Scrape Glassdoor for company jobs - EXACT COMPANY ONLY"""
-        try:
-            # Search specifically for the company
-            search_query = company_name.replace(" ", "%20")
-            url = f"https://www.glassdoor.com/Job/jobs.htm?sc.keyword={search_query}&locT=C&locId=1148170"
-            
-            response = self.session.get(url, timeout=10)
-            if response.status_code != 200:
-                return []
-            
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Glassdoor job selectors
-            job_cards = soup.find_all(['div'], class_=re.compile(r'job.*card|listing', re.I))
-            
-            jobs_found = []
-            
-            for card in job_cards[:3]:  # Limit to 3 jobs
-                try:
-                    # CRITICAL: Verify this job is from the target company
-                    card_text = card.get_text().lower()
-                    if company_name.lower() not in card_text:
-                        continue  # Skip if not from our target company
-                    
-                    title_elem = card.find(['a', 'h2'], class_=re.compile(r'job.*title', re.I))
-                    title = title_elem.get_text().strip() if title_elem else "Glassdoor Job"
-                    
-                    link_elem = card.find('a', href=True)
-                    job_url = link_elem['href'] if link_elem else url
-                    
-                    if job_url.startswith('/'):
-                        job_url = "https://www.glassdoor.com" + job_url
-                    
-                    jobs_found.append({
-                        'title': title[:100],
-                        'url': job_url,
-                        'keywords_found': ['glassdoor_listing'],
-                        'source': 'Glassdoor'
-                    })
-                    
-                except Exception as e:
-                    continue
-            
-            return jobs_found
-            
-        except Exception as e:
-            print(f"  Error scraping Glassdoor: {str(e)[:50]}")
             return []
     
     def scan_company_multiplatform(self, company_data, keywords):
@@ -471,24 +302,13 @@ class MultiPlatformJobScraper:
             print(f"  Careers page: {len(careers_jobs)} jobs")
             time.sleep(self.rate_limits['careers'])
         
-        # 2. Use job boards as backup OR primary (only if really needed)
+        # 2. Use Indeed as backup if needed
         if primary_source == 'job_boards' or (len(all_jobs) == 0 and not careers_url):
-            
-            # Indeed (for all companies using job boards)
             indeed_jobs = self.scrape_indeed_company(company_name, f"{city},CO", keywords)
             all_jobs.extend(indeed_jobs)
             platform_stats['indeed'] = len(indeed_jobs)
             print(f"  Indeed: {len(indeed_jobs)} jobs")
             time.sleep(self.rate_limits['indeed'])
-            
-            # Skip AngelList and Glassdoor for speed (they rarely have good results anyway)
-            # Only use if we have absolutely no jobs
-            if len(all_jobs) == 0 and company_size == 'Small':
-                angellist_jobs = self.scrape_angellist_company(company_name)
-                all_jobs.extend(angellist_jobs)
-                platform_stats['angellist'] = len(angellist_jobs)
-                print(f"  AngelList: {len(angellist_jobs)} jobs")
-                time.sleep(self.rate_limits['angellist'])
         
         # Add company metadata to all jobs
         for job in all_jobs:
@@ -574,7 +394,7 @@ class MultiPlatformJobScraper:
             return
         
         print(f"🚀 Starting multi-platform scan of {len(companies)} companies...")
-        print(f"Keywords: {', '.join(keywords[:10])}...")  # Show first 10 keywords
+        print(f"Keywords: {', '.join(keywords[:10])}...")
         
         # Initialize Notion if configured
         notion_token = os.getenv('NOTION_TOKEN')
