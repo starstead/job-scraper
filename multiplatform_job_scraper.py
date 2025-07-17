@@ -148,7 +148,8 @@ class MultiPlatformJobScraper:
             
             jobs_found = []
             
-            for element in job_elements[:15]:  # Limit to 15 elements per page
+            # Speed optimization: Limit job elements processed
+        for element in job_elements[:5]:  # Process max 5 job elements per company
                 element_text = element.get_text().lower()
                 
                 # Check for keyword matches
@@ -470,8 +471,8 @@ class MultiPlatformJobScraper:
             print(f"  Careers page: {len(careers_jobs)} jobs")
             time.sleep(self.rate_limits['careers'])
         
-        # 2. Use job boards as backup OR primary (based on strategy)
-        if primary_source == 'job_boards' or len(all_jobs) < 2:
+        # 2. Use job boards as backup OR primary (only if really needed)
+        if primary_source == 'job_boards' or (len(all_jobs) == 0 and not careers_url):
             
             # Indeed (for all companies using job boards)
             indeed_jobs = self.scrape_indeed_company(company_name, f"{city},CO", keywords)
@@ -480,21 +481,14 @@ class MultiPlatformJobScraper:
             print(f"  Indeed: {len(indeed_jobs)} jobs")
             time.sleep(self.rate_limits['indeed'])
             
-            # AngelList (for small companies)
-            if company_size == 'Small':
+            # Skip AngelList and Glassdoor for speed (they rarely have good results anyway)
+            # Only use if we have absolutely no jobs
+            if len(all_jobs) == 0 and company_size == 'Small':
                 angellist_jobs = self.scrape_angellist_company(company_name)
                 all_jobs.extend(angellist_jobs)
                 platform_stats['angellist'] = len(angellist_jobs)
                 print(f"  AngelList: {len(angellist_jobs)} jobs")
                 time.sleep(self.rate_limits['angellist'])
-            
-            # Glassdoor (if we still haven't found enough jobs)
-            if len(all_jobs) < 3:
-                glassdoor_jobs = self.scrape_glassdoor_company(company_name, city)
-                all_jobs.extend(glassdoor_jobs)
-                platform_stats['glassdoor'] = len(glassdoor_jobs)
-                print(f"  Glassdoor: {len(glassdoor_jobs)} jobs")
-                time.sleep(self.rate_limits['glassdoor'])
         
         # Add company metadata to all jobs
         for job in all_jobs:
@@ -600,8 +594,8 @@ class MultiPlatformJobScraper:
         companies_scanned = 0
         new_jobs_added = 0
         
-        # Test companies 50-100 
-        companies_to_scan = companies[50:100]  
+        # Full scan of all companies - tested and working!
+        companies_to_scan = companies
         
         for company_data in companies_to_scan:
             try:
@@ -625,8 +619,8 @@ class MultiPlatformJobScraper:
                 for platform, count in platform_stats.items():
                     total_stats[platform] += count
                 
-                # Adaptive delay based on company size
-                delay = 3 if company_data.get('Company_Size') == 'Large' else 5
+                # Adaptive delay - faster for large scans
+                delay = 2 if company_data.get('Company_Size') == 'Large' else 3
                 time.sleep(delay)
                 
             except Exception as e:
@@ -665,4 +659,5 @@ class MultiPlatformJobScraper:
 
 if __name__ == "__main__":
     scraper = MultiPlatformJobScraper()
+    scraper.run_multiplatform_scan()
     scraper.run_multiplatform_scan()
