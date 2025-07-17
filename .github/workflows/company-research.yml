@@ -1,0 +1,123 @@
+name: Company Research & Discovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      research_focus:
+        description: 'Research focus area'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+        - both
+        - anne_focus
+        - alessandro_focus
+      
+      include_international:
+        description: 'Include international/European companies'
+        required: true
+        default: true
+        type: boolean
+        
+      include_denver:
+        description: 'Include Denver tech ecosystem'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  company-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        pip install requests pandas beautifulsoup4 lxml
+        
+    - name: Create research directories
+      run: |
+        mkdir -p research_results
+        mkdir -p company_analysis
+        
+    - name: Run company research
+      env:
+        RESEARCH_FOCUS: ${{ github.event.inputs.research_focus }}
+        INCLUDE_INTERNATIONAL: ${{ github.event.inputs.include_international }}
+        INCLUDE_DENVER: ${{ github.event.inputs.include_denver }}
+      run: python company_research.py
+      
+    - name: Analyze research results
+      run: |
+        echo "## 🔍 Company Research Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f research_results/research_summary_*.json ]; then
+          SUMMARY_FILE=$(ls research_results/research_summary_*.json | head -n 1)
+          
+          echo "### 📊 Research Summary" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          cat "$SUMMARY_FILE" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "### 📁 Files Created" >> $GITHUB_STEP_SUMMARY
+        ls -la research_results/ >> $GITHUB_STEP_SUMMARY
+        
+    - name: Upload research artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: company-research-results
+        path: research_results/
+        retention-days: 30
+        
+    - name: Create integration preview
+      run: |
+        echo "## 🚀 Integration Preview" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Companies Ready to Add to Scraper:" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f research_results/new_companies_to_integrate_*.csv ]; then
+          INTEGRATION_FILE=$(ls research_results/new_companies_to_integrate_*.csv | head -n 1)
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Company | Industry | Careers URL Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|----------|-------------------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Show first 10 companies in table format
+          tail -n +2 "$INTEGRATION_FILE" | head -n 10 | while IFS=',' read -r company careers_url industry source size city; do
+            status="✅ Found"
+            if [[ "$careers_url" == *"Not found"* ]]; then
+              status="❌ Missing"
+            fi
+            echo "| $company | $industry | $status |" >> $GITHUB_STEP_SUMMARY
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the research artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "2. Review \`new_companies_to_integrate_*.csv\`" >> $GITHUB_STEP_SUMMARY
+          echo "3. Add selected companies to \`companies_final_ready.csv\`" >> $GITHUB_STEP_SUMMARY
+          echo "4. Run your job scraper to test new companies" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+    - name: Commit research results (optional)
+      if: ${{ github.event.inputs.save_to_repo == 'true' }}
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add research_results/
+        if ! git diff --staged --quiet; then
+          git commit -m "📊 Company research results - $(date '+%Y-%m-%d %H:%M')"
+          git push
+        else
+          echo "No research results to commit"
+        fi
