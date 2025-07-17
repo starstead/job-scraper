@@ -660,4 +660,3 @@ class MultiPlatformJobScraper:
 if __name__ == "__main__":
     scraper = MultiPlatformJobScraper()
     scraper.run_multiplatform_scan()
-    scraper.run_multiplatform_scan()
