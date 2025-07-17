@@ -1,145 +1,45 @@
 {
-  "scan_date": "2025-07-17T16:52:16.130531",
+  "scan_date": "2025-07-17T17:15:39.689766",
   "companies_scanned": 50,
-  "total_jobs": 8,
-  "new_jobs_added_to_notion": 0,
+  "total_jobs": 2,
+  "new_jobs_added_to_notion": 2,
   "platform_breakdown": {
-    "careers": 8,
+    "careers": 2,
     "indeed": 0,
     "angellist": 0,
     "glassdoor": 0
   },
   "jobs": [
     {
-      "title": "Group Product Manager",
-      "url": "https://absencesoft.com/careers/#openings",
-      "keywords_found": [
-        "product manager",
-        "Product Manager",
-        "group product manager",
-        "Group Product Manager"
-      ],
-      "source": "Careers Page",
-      "company": "AbsenceSoft",
-      "industry": "Software & Services",
-      "company_size": "Medium",
-      "scan_date": "2025-07-17",
-      "unique_id": "e1cdc804d9436593"
-    },
-    {
-      "title": "Project Manager",
-      "url": "https://absencesoft.com/careers/#openings",
-      "keywords_found": [
-        "project manager",
-        "Project Manager"
-      ],
-      "source": "Careers Page",
-      "company": "AbsenceSoft",
-      "industry": "Software & Services",
-      "company_size": "Medium",
-      "scan_date": "2025-07-17",
-      "unique_id": "a7b5ee6eba9afd30"
-    },
-    {
-      "title": "Product Manager",
-      "url": "https://absencesoft.com/careers/#openings",
-      "keywords_found": [
-        "product manager",
-        "Product Manager"
-      ],
-      "source": "Careers Page",
-      "company": "AbsenceSoft",
-      "industry": "Software & Services",
-      "company_size": "Medium",
-      "scan_date": "2025-07-17",
-      "unique_id": "52445e361e3e8dd3"
-    },
-    {
-      "title": "INTELLIGENT OPERATING SOLUTIONS",
-      "url": "https://careers.fortive.com/",
-      "keywords_found": [
-        "project manager",
-        "Project Manager",
-        "senior project manager",
-        "Senior Project Manager",
-        "project management",
-        "Project Management",
-        "remote"
-      ],
-      "source": "Careers Page",
-      "company": "Accruent",
-      "industry": "Real Estate Technology",
-      "company_size": "Small",
-      "scan_date": "2025-07-17",
-      "unique_id": "5bd940c4c9827c2e"
-    },
-    {
       "title": "Careers",
-      "url": "https://www.besmartee.com/careers",
+      "url": "https://datadoghq.com",
       "keywords_found": [
-        "product owner",
-        "Product Owner",
-        "remote"
-      ],
-      "source": "Careers Page",
-      "company": "BeSmartee",
-      "industry": "Fintech",
-      "company_size": "Medium",
-      "scan_date": "2025-07-17",
-      "unique_id": "135eb5f352dd465a"
-    },
-    {
-      "title": "Senior Product Manager, Retail Mortgage",
-      "url": "https://jobs.lever.co/better/fadac419-bea9-4058-b38f-8d0144302ffb",
-      "keywords_found": [
-        "product manager",
-        "Product Manager",
-        "senior product manager",
-        "Senior Product Manager",
         "product management",
         "Product Management",
-        "project manager",
-        "Project Manager",
-        "technical project manager",
-        "Technical Project Manager",
         "remote",
         "hybrid"
       ],
       "source": "Careers Page",
-      "company": "Better",
-      "industry": "Fintech",
-      "company_size": "Medium",
+      "company": "Data Dog",
+      "industry": "Analytics & AI",
+      "company_size": "Large",
       "scan_date": "2025-07-17",
-      "unique_id": "33523ba6845880e1"
+      "unique_id": "cdc41e96be5c313f"
     },
     {
-      "title": "Product Management",
-      "url": "https://bombora.com/job-post/?gh_jid=4803106002",
+      "title": "Land Products, Programs & Services",
+      "url": "https://gdmissionsystems.com/careers/job-search?state=eyJ3aGF0IjoiI3NkYWdyb3VuZCIsImFkZHJlc3MiOltdLCJmYWNldHMiOltdfQ%3D%3D",
       "keywords_found": [
-        "product management",
-        "Product Management",
+        "project manager",
+        "Project Manager",
         "remote"
       ],
       "source": "Careers Page",
-      "company": "Bombora",
-      "industry": "Marketing Technology",
-      "company_size": "Medium",
+      "company": "General Dynamics",
+      "industry": "Public Safety",
+      "company_size": "Large",
       "scan_date": "2025-07-17",
-      "unique_id": "731ec678e9a055b9"
-    },
-    {
-      "title": "Technical Business Analyst",
-      "url": "https://burstiq.com/technical-business-analyst/",
-      "keywords_found": [
-        "business analyst",
-        "Business Analyst"
-      ],
-      "source": "Careers Page",
-      "company": "burstIQ",
-      "industry": "Analytics & AI",
-      "company_size": "Small",
-      "scan_date": "2025-07-17",
-      "unique_id": "34c359518119a530"
+      "unique_id": "121c5a9c63c2b0f1"
     }
   ]
 }
