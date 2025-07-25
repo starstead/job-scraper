@@ -1,10 +1,10 @@
 {
-  "scan_date": "2025-07-21T14:13:22.489135",
+  "scan_date": "2025-07-25T17:10:18.218345",
   "companies_scanned": 242,
-  "total_jobs": 24,
-  "new_jobs_added_to_notion": 1,
+  "total_jobs": 20,
+  "new_jobs_added_to_notion": 0,
   "platform_breakdown": {
-    "careers": 24,
+    "careers": 20,
     "indeed": 0,
     "angellist": 0,
     "glassdoor": 0
@@ -23,7 +23,7 @@
       "company": "AbsenceSoft",
       "industry": "Software & Services",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "e1cdc804d9436593"
     },
     {
@@ -37,22 +37,8 @@
       "company": "AbsenceSoft",
       "industry": "Software & Services",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "a7b5ee6eba9afd30"
-    },
-    {
-      "title": "Product Manager",
-      "url": "https://absencesoft.com/careers/#openings",
-      "keywords_found": [
-        "product manager",
-        "Product Manager"
-      ],
-      "source": "Careers Page",
-      "company": "AbsenceSoft",
-      "industry": "Software & Services",
-      "company_size": "Medium",
-      "scan_date": "2025-07-21",
-      "unique_id": "52445e361e3e8dd3"
     },
     {
       "title": "Careers",
@@ -66,7 +52,7 @@
       "company": "BeSmartee",
       "industry": "Fintech",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "3b5b0ceaa2a42b4d"
     },
     {
@@ -90,13 +76,15 @@
       "company": "Better",
       "industry": "Fintech",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "33523ba6845880e1"
     },
     {
       "title": "Product Management",
       "url": "https://bombora.com/about/careers",
       "keywords_found": [
+        "product manager",
+        "Product Manager",
         "product management",
         "Product Management",
         "remote"
@@ -105,7 +93,7 @@
       "company": "Bombora",
       "industry": "Marketing Technology",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "f7cecd2db4bc2f98"
     },
     {
@@ -119,7 +107,7 @@
       "company": "burstIQ",
       "industry": "Analytics & AI",
       "company_size": "Small",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "34c359518119a530"
     },
     {
@@ -135,7 +123,7 @@
       "company": "Data Dog",
       "industry": "Analytics & AI",
       "company_size": "Large",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "fa21cfbfcd942840"
     },
     {
@@ -150,7 +138,7 @@
       "company": "Filevine",
       "industry": "Software & Services",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "d5656b10b831850f"
     },
     {
@@ -165,40 +153,8 @@
       "company": "General Dynamics",
       "industry": "Public Safety",
       "company_size": "Large",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "de690f8226b2ca8f"
-    },
-    {
-      "title": "DevOps Project Manager",
-      "url": "https://apply.workable.com/j/35B3F53C91",
-      "keywords_found": [
-        "project manager",
-        "Project Manager",
-        "implementation manager",
-        "Implementation Manager",
-        "remote",
-        "hybrid"
-      ],
-      "source": "Careers Page",
-      "company": "Kaseware",
-      "industry": "Public Safety",
-      "company_size": "Small",
-      "scan_date": "2025-07-21",
-      "unique_id": "e0d068b51d274038"
-    },
-    {
-      "title": "Related Jobs",
-      "url": "https://careers.l3harris.com/en/job/wilmington/scientist-systems-engineer-space-vehicle/4832/83960399552",
-      "keywords_found": [
-        "program management",
-        "Program Management"
-      ],
-      "source": "Careers Page",
-      "company": "L3Harris",
-      "industry": "Public Safety",
-      "company_size": "Large",
-      "scan_date": "2025-07-21",
-      "unique_id": "a55fd2e72a15eebc"
     },
     {
       "title": "At Lendesk WeValue You",
@@ -214,7 +170,7 @@
       "company": "Lendesk",
       "industry": "Fintech",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "4b02ff2c113024e9"
     },
     {
@@ -225,17 +181,21 @@
         "Product Manager",
         "product management",
         "Product Management",
+        "project manager",
+        "Project Manager",
+        "senior project manager",
+        "Senior Project Manager",
         "program manager",
         "Program Manager",
-        "business analyst",
-        "Business Analyst",
-        "product operations manager"
+        "product operations manager",
+        "project management",
+        "Project Management"
       ],
       "source": "Careers Page",
       "company": "Magnet Forensics",
       "industry": "Public Safety",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "083c8fef729873e7"
     },
     {
@@ -257,7 +217,7 @@
       "company": "Mark43",
       "industry": "Public Safety",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "cc35c163a0c6f0f4"
     },
     {
@@ -271,7 +231,7 @@
       "company": "Navigator Business Solutions",
       "industry": "Enterprise Software",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "32c95cca83dcefea"
     },
     {
@@ -286,7 +246,7 @@
       "company": "Sardine",
       "industry": "Cybersecurity",
       "company_size": "Small",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "a5c484eff461e812"
     },
     {
@@ -302,7 +262,7 @@
       "company": "Sunbit",
       "industry": "Fintech",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "47f0cd8343056666"
     },
     {
@@ -317,7 +277,7 @@
       "company": "Switch Automation",
       "industry": "Software & Services",
       "company_size": "Small",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "47be77f26a514a53"
     },
     {
@@ -332,7 +292,7 @@
       "company": "Team Snap",
       "industry": "Other",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "6bb48263ea991a80"
     },
     {
@@ -346,24 +306,8 @@
       "company": "Ttec",
       "industry": "Communications",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "814bdf7a69d2c527"
-    },
-    {
-      "title": "Help us shape the future of Upland.",
-      "url": "https://uplandsoftware.com/",
-      "keywords_found": [
-        "project management",
-        "Project Management",
-        "remote",
-        "hybrid"
-      ],
-      "source": "Careers Page",
-      "company": "Upland RO Innovation",
-      "industry": "Software & Services",
-      "company_size": "Medium",
-      "scan_date": "2025-07-21",
-      "unique_id": "934c0c16ba808815"
     },
     {
       "title": "Toggle",
@@ -376,7 +320,7 @@
       "company": "User Testing",
       "industry": "Software & Services",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "d2875dbe4fc10ad7"
     },
     {
@@ -390,7 +334,7 @@
       "company": "Sagitec",
       "industry": "Software & Services",
       "company_size": "Medium",
-      "scan_date": "2025-07-21",
+      "scan_date": "2025-07-25",
       "unique_id": "8ad10704a4f765fc"
     }
   ]
