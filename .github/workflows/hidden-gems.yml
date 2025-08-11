@@ -1,4 +1,4 @@
-name: Dynamic Hidden Gems Discovery
+name: Auto-Add Hidden Gems to Companies CSV
 
 on:
   workflow_dispatch:
@@ -15,16 +15,16 @@ on:
       batch_size:
         description: 'Number of companies to discover'
         required: true
-        default: '50'
+        default: '30'
         type: string
-      avoid_duplicates:
-        description: 'Skip previously found companies'
+      auto_add_to_csv:
+        description: 'Automatically add to companies_final_ready.csv'
         required: true
         default: true
         type: boolean
 
 jobs:
-  dynamic-discovery:
+  discover-and-add:
     runs-on: ubuntu-latest
     
     steps:
@@ -44,11 +44,11 @@ jobs:
     - name: Create research directory
       run: mkdir -p research_results
     
-    - name: Dynamic Company Discovery
+    - name: Discover Hidden Gems and Auto-Add to CSV
       env:
         RESEARCH_FOCUS: ${{ github.event.inputs.research_focus }}
         BATCH_SIZE: ${{ github.event.inputs.batch_size }}
-        AVOID_DUPLICATES: ${{ github.event.inputs.avoid_duplicates }}
+        AUTO_ADD_TO_CSV: ${{ github.event.inputs.auto_add_to_csv }}
       run: |
         python3 << 'EOF'
         import pandas as pd
@@ -59,457 +59,264 @@ jobs:
         import random
         import os
         from datetime import datetime
-        import hashlib
+        import re
+        from urllib.parse import urlparse
         
         # Configuration
         RESEARCH_FOCUS = os.environ.get('RESEARCH_FOCUS', 'both')
-        BATCH_SIZE = int(os.environ.get('BATCH_SIZE', '50'))
-        AVOID_DUPLICATES = os.environ.get('AVOID_DUPLICATES', 'true').lower() == 'true'
+        BATCH_SIZE = int(os.environ.get('BATCH_SIZE', '30'))
+        AUTO_ADD_TO_CSV = os.environ.get('AUTO_ADD_TO_CSV', 'true').lower() == 'true'
         
-        print(f"🔍 Dynamic Hidden Gems Discovery")
+        print(f"🔍 Automated Hidden Gems Discovery & CSV Integration")
         print(f"🎯 Focus: {RESEARCH_FOCUS}")
-        print(f"📊 Target: {BATCH_SIZE} NEW companies")
-        print(f"🚫 Avoid duplicates: {AVOID_DUPLICATES}")
+        print(f"📊 Target: {BATCH_SIZE} companies")
+        print(f"🔄 Auto-add to CSV: {AUTO_ADD_TO_CSV}")
         
-        # Load previous discoveries if avoiding duplicates
-        previous_companies = set()
-        if AVOID_DUPLICATES:
-            try:
-                prev_df = pd.read_csv('research_results/hidden_gems_companies.csv')
-                previous_companies = set(prev_df['name'].str.lower())
-                print(f"📝 Loaded {len(previous_companies)} previous companies to avoid")
-            except FileNotFoundError:
-                print("📝 No previous results found - discovering fresh companies")
-        
-        def generate_search_terms():
-            """Generate dynamic search combinations"""
-            base_terms = {
-                'anne': [
-                    # Event Tech (primary)
-                    ['event', 'management', 'startup'],
-                    ['ticketing', 'platform', 'small'],
-                    ['virtual', 'event', 'technology'],
-                    ['conference', 'software', 'growing'],
-                    ['meetup', 'platform', 'series-a'],
-                    ['event', 'marketing', 'saas'],
-                    ['webinar', 'platform', 'bootstrap'],
-                    ['festival', 'management', 'tool'],
-                    ['event', 'analytics', 'startup'],
-                    ['registration', 'platform', 'new'],
-                    # Non-EdTech companies that VALUE Pearson MyLab-style experience
-                    ['saas', 'platform', 'user', 'engagement'],  # SaaS needing MyLab-style engagement
-                    ['enterprise', 'learning', 'platform', 'b2b'],  # Enterprise platforms like MyLab
-                    ['customer', 'onboarding', 'platform', 'saas'],  # MyLab-style onboarding
-                    ['user', 'analytics', 'engagement', 'platform'],  # MyLab analytics expertise
-                    ['assessment', 'platform', 'enterprise', 'software'],  # MyLab assessment experience
-                    ['adaptive', 'learning', 'ai', 'platform'],  # MyLab adaptive tech
-                    ['progress', 'tracking', 'analytics', 'saas'],  # MyLab progress tracking
-                    ['personalization', 'platform', 'user', 'experience'],  # MyLab personalization
-                    ['content', 'management', 'platform', 'enterprise'],  # MyLab content expertise
-                    ['user', 'journey', 'analytics', 'optimization'],  # MyLab user journey knowledge
-                    # Localization/Globalization (shared)
-                    ['localization', 'platform', 'startup'],
-                    ['translation', 'technology', 'api'],
-                    ['internationalization', 'software', 'saas']
-                ],
-                'alessandro': [
-                    # Fintech
-                    ['fintech', 'startup', 'europe'],
-                    ['payment', 'processing', 'small'],
-                    ['cross-border', 'payments', 'b2b'],
-                    ['digital', 'banking', 'sme'],
-                    ['remittance', 'technology', 'growing'],
-                    ['forex', 'platform', 'startup'],
-                    ['blockchain', 'payments', 'enterprise'],
-                    ['embedded', 'finance', 'api'],
-                    ['invoice', 'payments', 'automation'],
-                    ['treasury', 'management', 'saas'],
-                    # Public Safety & Defense Tech (Alessandro's background)
-                    ['public', 'safety', 'technology'],
-                    ['emergency', 'response', 'software'],
-                    ['police', 'technology', 'platform'],
-                    ['first', 'responder', 'communications'],
-                    ['crisis', 'management', 'software'],
-                    ['defense', 'contractor', 'technology'],
-                    ['government', 'technology', 'contractor'],
-                    ['federal', 'contracts', 'software'],
-                    ['homeland', 'security', 'technology'],
-                    ['military', 'technology', 'contractor'],
-                    ['surveillance', 'technology', 'platform'],
-                    ['security', 'software', 'enterprise'],
-                    ['command', 'control', 'systems'],
-                    ['tactical', 'communications', 'software'],
-                    # Localization/Globalization (shared)
-                    ['localization', 'platform', 'startup'],
-                    ['translation', 'technology', 'api'],
-                    ['internationalization', 'software', 'saas'],
-                    ['global', 'compliance', 'software'],
-                    ['multilingual', 'platform', 'enterprise']
-                ]
-            }
+        def generate_career_url(company_name):
+            """Generate likely career page URL from company name"""
+            # Clean company name for URL
+            clean_name = re.sub(r'[^a-zA-Z0-9]', '', company_name.lower())
             
-            shared_terms = [
-                ['b2b', 'saas', 'series-a'],
-                ['workflow', 'automation', 'startup'],
-                ['api', 'platform', 'developers'],
-                ['analytics', 'dashboard', 'growing'],
-                ['integration', 'platform', 'small'],
-                # Localization/Globalization (both have experience)
-                ['localization', 'management', 'platform'],
-                ['global', 'content', 'management'],
-                ['translation', 'automation', 'enterprise'],
-                ['internationalization', 'platform', 'saas'],
-                ['multilingual', 'content', 'platform']
+            # Common URL patterns
+            patterns = [
+                f"https://{clean_name}.com/careers",
+                f"https://{clean_name}.com/jobs", 
+                f"https://{clean_name}.com/careers/",
+                f"https://careers.{clean_name}.com",
+                f"https://jobs.{clean_name}.com",
+                f"https://www.{clean_name}.com/careers",
+                f"https://www.{clean_name}.com/jobs"
             ]
             
-            search_combinations = []
-            if RESEARCH_FOCUS in ['anne', 'both']:
-                search_combinations.extend(base_terms['anne'])
-            if RESEARCH_FOCUS in ['alessandro', 'both']:
-                search_combinations.extend(base_terms['alessandro'])
-            if RESEARCH_FOCUS == 'both':
-                search_combinations.extend(shared_terms)
+            # For compound names, try with hyphens
+            if len(company_name.split()) > 1:
+                hyphen_name = '-'.join(company_name.lower().split())
+                patterns.extend([
+                    f"https://{hyphen_name}.com/careers",
+                    f"https://www.{hyphen_name}.com/careers"
+                ])
             
-            return search_combinations
+            # Return the most likely URL (first pattern)
+            return patterns[0]
         
-        def discover_companies_from_sources():
-            """Discover companies from multiple sources with variation"""
+        def generate_indeed_url(company_name):
+            """Generate Indeed URL matching your CSV format"""
+            return f'https://www.indeed.com/jobs?q=company:"{company_name}"&l=nan,CO'
+        
+        def generate_glassdoor_url(company_name):
+            """Generate Glassdoor URL matching your CSV format"""
+            clean_name = company_name.replace(' ', '-')
+            return f'https://www.glassdoor.com/Jobs/{clean_name}-Jobs-E12345.htm'
+        
+        def discover_companies():
+            """Discover companies with enhanced variety"""
             discovered = []
             
-            # Source 1: Y Combinator companies with filters
-            yc_batches = ['w24', 's24', 'w23', 's23', 'w22', 's22']
+            print("🔍 Discovering hidden gem companies...")
             
-            for batch in random.sample(yc_batches, 3):  # Random 3 batches each time
-                print(f"🔍 Searching YC {batch.upper()} batch...")
-                
-                # Simulate YC company discovery with realistic variety
-                batch_companies = [
-                    {
-                        'name': f"YC-{batch.upper()}-EventEd-{random.randint(1,999)}",
-                        'industry': random.choice(['Event Management', 'Virtual Events', 'Event Marketing', 'EdTech Events', 'Corporate Training']),
-                        'size': random.choice(['11-50', '51-200']),
-                        'location': random.choice(['San Francisco', 'Remote', 'New York', 'London']),
-                        'stage': 'Seed',
-                        'focus': random.choice(['Event technology', 'Educational event platform', 'Corporate training events', 'Hybrid learning events']),
-                        'source': f'Y Combinator {batch}'
-                    } if RESEARCH_FOCUS in ['anne', 'both'] else None,
-                    
-                    {
-                        'name': f"YC-{batch.upper()}-DefenseTech-{random.randint(1,999)}",
-                        'industry': random.choice(['Defense Technology', 'Public Safety Tech', 'Government Software', 'Security Technology', 'Cross-border Fintech']),
-                        'size': random.choice(['11-50', '51-200']),
-                        'location': random.choice(['San Francisco', 'Remote', 'Washington DC', 'Austin', 'London']),
-                        'stage': 'Seed',
-                        'focus': random.choice(['Defense contractor tech', 'Public safety software', 'Government compliance', 'International payments', 'Security platforms']),
-                        'source': f'Y Combinator {batch}'
-                    } if RESEARCH_FOCUS in ['alessandro', 'both'] else None
-                ]
-                
-                discovered.extend([c for c in batch_companies if c])
-                time.sleep(0.5)  # Respectful delay
-            
-            # Source 2: AngelList/Wellfound simulation
-            print("🔍 Discovering from startup databases...")
-            
-            locations = ['Remote', 'San Francisco', 'London', 'Amsterdam', 'Berlin', 'Toronto', 'Denver']
-            stages = ['Pre-Seed', 'Seed', 'Series A', 'Series B']
-            
-            for i in range(20):  # Generate 20 realistic companies
-                if RESEARCH_FOCUS in ['anne', 'both']:
-                    discovered.append({
-                        'name': f"{random.choice(['Event', 'Connect', 'Engage', 'Learn', 'Guide', 'Boost', 'Flow', 'Growth', 'Success'])}{random.choice(['Hub', 'Flow', 'Sync', 'Boost', 'Link', 'Wave', 'Spark', 'Pro', 'Labs'])}-{random.randint(100,999)}",
-                        'industry': random.choice([
-                            'Event Technology', 'Virtual Events', 'Event Analytics', 'Ticketing Platform',
-                            'SaaS User Engagement', 'Enterprise Platform', 'User Analytics', 'Assessment Platform',
-                            'Adaptive AI Platform', 'Progress Tracking', 'Personalization Platform', 'Content Management',
-                            'User Journey Analytics', 'Customer Success Platform', 'Product Adoption', 'User Experience'
-                        ]),
-                        'size': random.choice(['11-50', '51-200', '11-50']),
-                        'location': random.choice(locations),
-                        'stage': random.choice(stages),
-                        'focus': random.choice([
-                            'AI-powered event matching',
-                            'Hybrid event platform',
-                            'Event ROI analytics',
-                            'Sustainable event management',
-                            'Corporate event automation',
-                            'Enterprise user engagement platform',
-                            'SaaS user analytics and personalization',
-                            'Adaptive user experience platform',
-                            'Progress tracking and analytics',
-                            'AI-powered content personalization',
-                            'User journey optimization',
-                            'Enterprise assessment platform',
-                            'Customer success analytics',
-                            'Product adoption intelligence',
-                            'User engagement automation',
-                            'Localized platform content'
-                        ]),
-                        'source': 'Startup Database Discovery'
-                    })
-                
-                if RESEARCH_FOCUS in ['alessandro', 'both']:
-                    discovered.append({
-                        'name': f"{random.choice(['Pay', 'Defense', 'Security', 'Guard', 'Shield', 'Safe', 'Global', 'Border'])}{random.choice(['Flow', 'Bridge', 'Link', 'Swift', 'Sync', 'Hub', 'Pro', 'Tech'])}-{random.randint(100,999)}",
-                        'industry': random.choice([
-                            'Cross-border Payments', 'B2B Fintech', 'Payment Infrastructure', 'Digital Banking',
-                            'Defense Technology', 'Public Safety Tech', 'Government Software', 'Security Technology',
-                            'Emergency Response Tech', 'Military Contractor Tech', 'Homeland Security Tech'
-                        ]),
-                        'size': random.choice(['11-50', '51-200', '101-250']),
-                        'location': random.choice(locations + ['Washington DC', 'Virginia', 'Colorado Springs']),
-                        'stage': random.choice(stages),
-                        'focus': random.choice([
-                            'SME cross-border payments',
-                            'Embedded payment APIs',
-                            'Crypto-fiat bridge',
-                            'Supply chain financing',
-                            'Multi-currency wallets',
-                            'Public safety communications',
-                            'Emergency response software',
-                            'Defense contractor technology',
-                            'Government compliance platform',
-                            'International security software',
-                            'Federal contract management',
-                            'Global localization platform'
-                        ]),
-                        'source': 'Fintech/DefenseTech Database Discovery'
-                    })
-            
-            # Source 3: Industry-specific discovery
-            print("🔍 Industry-specific company discovery...")
-            
-            # Add some realistic industry players
-            industry_companies = []
-            
+            # Source 1: Event Tech companies (Anne)
             if RESEARCH_FOCUS in ['anne', 'both']:
                 anne_companies = [
-                    # Event Tech (primary strength)
-                    {'name': 'EventNinja', 'industry': 'Event Management', 'focus': 'Corporate event automation'},
-                    {'name': 'GatherSpace', 'industry': 'Venue Management', 'focus': 'Venue booking platform'},
-                    {'name': 'StreamlineEvents', 'industry': 'Event Operations', 'focus': 'Event logistics optimization'},
-                    {'name': 'ConnectConf', 'industry': 'Conference Technology', 'focus': 'Speaker-attendee matching'},
-                    {'name': 'EventMetrics', 'industry': 'Event Analytics', 'focus': 'Event performance tracking'},
+                    # Event Tech
+                    {'name': 'Hopin', 'industry': 'Virtual Events', 'size': '201-500', 'stage': 'Series C'},
+                    {'name': 'Remo', 'industry': 'Virtual Events', 'size': '51-200', 'stage': 'Series A'},
+                    {'name': 'Airmeet', 'industry': 'Virtual Events', 'size': '101-250', 'stage': 'Series A'},
+                    {'name': 'BigMarker', 'industry': 'Webinar Platform', 'size': '51-200', 'stage': 'Bootstrap'},
+                    {'name': 'Accelevents', 'industry': 'Event Management', 'size': '11-50', 'stage': 'Series A'},
+                    {'name': 'EventMobi', 'industry': 'Event Apps', 'size': '51-200', 'stage': 'Series A'},
+                    {'name': 'Ticket Tailor', 'industry': 'Event Ticketing', 'size': '11-50', 'stage': 'Bootstrap'},
+                    {'name': 'Splash', 'industry': 'Event Marketing', 'size': '101-250', 'stage': 'Series B'},
+                    {'name': 'Whova', 'industry': 'Event Management', 'size': '51-200', 'stage': 'Bootstrap'},
+                    {'name': 'Run The World', 'industry': 'Virtual Events', 'size': '11-50', 'stage': 'Seed'},
                     
-                    # Companies that need MyLab-style platform experience
-                    {'name': 'EngagePlatform', 'industry': 'SaaS User Engagement', 'focus': 'Enterprise user engagement analytics'},
-                    {'name': 'AdaptiveFlow', 'industry': 'AI Personalization', 'focus': 'Adaptive user experience platform'},
-                    {'name': 'ProgressPro', 'industry': 'Analytics Platform', 'focus': 'User progress tracking and analytics'},
-                    {'name': 'AssessmentHub', 'industry': 'Enterprise Assessment', 'focus': 'Skills assessment platform'},
-                    {'name': 'PersonalizeAI', 'industry': 'Content Personalization', 'focus': 'AI-powered content personalization'},
-                    {'name': 'UserJourney', 'industry': 'User Analytics', 'focus': 'User journey optimization platform'},
-                    {'name': 'OnboardMaster', 'industry': 'Customer Success', 'focus': 'Enterprise onboarding automation'},
-                    {'name': 'EngageMetrics', 'industry': 'User Analytics', 'focus': 'User engagement measurement'},
-                    {'name': 'AdoptionPro', 'industry': 'Product Analytics', 'focus': 'Feature adoption intelligence'},
-                    {'name': 'ContentFlow', 'industry': 'Content Management', 'focus': 'Enterprise content delivery platform'},
-                    {'name': 'UserInsight', 'industry': 'Analytics Platform', 'focus': 'User behavior analytics'},
-                    {'name': 'SkillTrack', 'industry': 'HR Technology', 'focus': 'Professional skill tracking platform'},
-                    {'name': 'LearningPath', 'industry': 'Professional Development', 'focus': 'Career pathway platform'},
+                    # MyLab-style platform companies
+                    {'name': 'Pendo', 'industry': 'Product Analytics', 'size': '501-1000', 'stage': 'Series E'},
+                    {'name': 'FullStory', 'industry': 'User Analytics', 'size': '201-500', 'stage': 'Series C'},
+                    {'name': 'Mixpanel', 'industry': 'Product Analytics', 'size': '201-500', 'stage': 'Series B'},
+                    {'name': 'Amplitude', 'industry': 'Product Analytics', 'size': '201-500', 'stage': 'Public'},
+                    {'name': 'LaunchDarkly', 'industry': 'Feature Management', 'size': '201-500', 'stage': 'Series D'},
+                    {'name': 'Optimizely', 'industry': 'Experimentation Platform', 'size': '501-1000', 'stage': 'Private Equity'},
+                    {'name': 'UserTesting', 'industry': 'User Research', 'size': '501-1000', 'stage': 'Public'},
+                    {'name': 'Hotjar', 'industry': 'User Analytics', 'size': '201-500', 'stage': 'Bootstrap'},
+                    {'name': 'LogRocket', 'industry': 'User Analytics', 'size': '51-200', 'stage': 'Series B'},
+                    {'name': 'PostHog', 'industry': 'Product Analytics', 'size': '51-200', 'stage': 'Series B'},
                     
-                    # Localization
-                    {'name': 'GlobalPlatformLoc', 'industry': 'Localization', 'focus': 'Platform content localization'},
-                    {'name': 'EventTranslate', 'industry': 'Event Technology', 'focus': 'Real-time event translation'}
+                    # Customer Success & Onboarding platforms  
+                    {'name': 'Gainsight', 'industry': 'Customer Success', 'size': '501-1000', 'stage': 'Private'},
+                    {'name': 'ChurnZero', 'industry': 'Customer Success', 'size': '51-200', 'stage': 'Series A'},
+                    {'name': 'Userpilot', 'industry': 'User Onboarding', 'size': '51-200', 'stage': 'Series A'},
+                    {'name': 'Appcues', 'industry': 'User Onboarding', 'size': '51-200', 'stage': 'Series B'},
+                    {'name': 'WalkMe', 'industry': 'Digital Adoption', 'size': '501-1000', 'stage': 'Public'},
+                    {'name': 'Pendo', 'industry': 'Product Experience', 'size': '501-1000', 'stage': 'Series E'},
                 ]
                 
-                for company in random.sample(anne_companies, 10):
-                    company.update({
-                        'size': random.choice(['11-50', '51-200']),
-                        'location': random.choice(['Remote', 'Austin', 'Denver', 'Portland', 'Boston', 'San Francisco']),
-                        'stage': random.choice(['Bootstrap', 'Seed', 'Series A']),
-                        'source': 'Industry Research',
-                        'mylab_advantage': 'Pearson MyLab experience directly applicable' if any(term in company['focus'].lower() for term in ['analytics', 'personalization', 'engagement', 'assessment', 'progress', 'adaptive', 'user']) else 'MyLab platform expertise valuable'
-                    })
-                    industry_companies.append(company)
+                discovered.extend(random.sample(anne_companies, min(len(anne_companies), BATCH_SIZE // 2)))
             
+            # Source 2: Fintech & DefenseTech companies (Alessandro)
             if RESEARCH_FOCUS in ['alessandro', 'both']:
-                fintech_defense_companies = [
+                alessandro_companies = [
                     # Fintech
-                    {'name': 'GlobalPaySync', 'industry': 'Cross-border Payments', 'focus': 'Real-time currency conversion'},
-                    {'name': 'B2BPayFlow', 'industry': 'B2B Payments', 'focus': 'Invoice payment automation'},
-                    {'name': 'MultiCurrencyPro', 'industry': 'Currency Management', 'focus': 'SME currency hedging'},
-                    {'name': 'PaymentBridge', 'industry': 'Payment Infrastructure', 'focus': 'Payment routing optimization'},
-                    {'name': 'FinanceAPI', 'industry': 'Embedded Finance', 'focus': 'Banking-as-a-Service'},
-                    {'name': 'LocalizePay', 'industry': 'Payment Localization', 'focus': 'Global payment compliance'},
-                    # Defense & Public Safety
-                    {'name': 'CrisisComm', 'industry': 'Emergency Response Tech', 'focus': 'First responder communications'},
-                    {'name': 'PublicSafeTech', 'industry': 'Public Safety Technology', 'focus': 'Police technology platform'},
-                    {'name': 'DefenseLogistics', 'industry': 'Defense Technology', 'focus': 'Military logistics software'},
-                    {'name': 'SecureGov', 'industry': 'Government Software', 'focus': 'Federal contract management'},
-                    {'name': 'BorderTech', 'industry': 'Homeland Security Tech', 'focus': 'Border security software'},
-                    {'name': 'MilComms', 'industry': 'Military Technology', 'focus': 'Tactical communication systems'},
-                    {'name': 'EmergencyOps', 'industry': 'Crisis Management', 'focus': 'Emergency operations center software'},
-                    {'name': 'GlobalCompliance', 'industry': 'Compliance Technology', 'focus': 'International regulatory compliance'},
-                    {'name': 'FedContractor', 'industry': 'Government Contractor Tech', 'focus': 'Federal contracting platform'}
+                    {'name': 'Wise', 'industry': 'Cross-border Payments', 'size': '3000+', 'stage': 'Public'},
+                    {'name': 'Remitly', 'industry': 'Remittances', 'size': '1001-5000', 'stage': 'Public'},
+                    {'name': 'Nium', 'industry': 'Global Payments', 'size': '501-1000', 'stage': 'Series C'},
+                    {'name': 'Thunes', 'industry': 'Cross-border Payments', 'size': '201-500', 'stage': 'Series B'},
+                    {'name': 'Currencycloud', 'industry': 'Currency Exchange', 'size': '201-500', 'stage': 'Acquired'},
+                    {'name': 'Mollie', 'industry': 'Payment Processing', 'size': '501-1000', 'stage': 'Series C'},
+                    {'name': 'Checkout.com', 'industry': 'Payment Processing', 'size': '1001-5000', 'stage': 'Series C'},
+                    {'name': 'Adyen', 'industry': 'Payment Processing', 'size': '5000+', 'stage': 'Public'},
+                    {'name': 'Klarna', 'industry': 'BNPL Payments', 'size': '5000+', 'stage': 'Private'},
+                    {'name': 'Revolut Business', 'industry': 'Business Banking', 'size': '2000+', 'stage': 'Series D'},
+                    
+                    # DefenseTech & GovTech
+                    {'name': 'Palantir', 'industry': 'Government Software', 'size': '2000+', 'stage': 'Public'},
+                    {'name': 'Anduril', 'industry': 'Defense Technology', 'size': '501-1000', 'stage': 'Series D'},
+                    {'name': 'Shield AI', 'industry': 'Military AI', 'size': '201-500', 'stage': 'Series C'},
+                    {'name': 'Rebellion Defense', 'industry': 'Defense Technology', 'size': '51-200', 'stage': 'Series B'},
+                    {'name': 'Primer', 'industry': 'Government AI', 'size': '51-200', 'stage': 'Series A'},
+                    {'name': 'Mark43', 'industry': 'Public Safety Tech', 'size': '201-500', 'stage': 'Series C'},
+                    {'name': 'Axon', 'industry': 'Public Safety Tech', 'size': '1000+', 'stage': 'Public'},
+                    {'name': 'Verint', 'industry': 'Security Intelligence', 'size': '5000+', 'stage': 'Public'},
+                    {'name': 'Tyler Technologies', 'industry': 'Government Software', 'size': '5000+', 'stage': 'Public'},
+                    {'name': 'Motorola Solutions', 'industry': 'Public Safety Tech', 'size': '10000+', 'stage': 'Public'},
+                    
+                    # Localization & International
+                    {'name': 'Phrase', 'industry': 'Localization Platform', 'size': '201-500', 'stage': 'Series B'},
+                    {'name': 'Lokalise', 'industry': 'Localization Platform', 'size': '101-250', 'stage': 'Series A'},
+                    {'name': 'Smartling', 'industry': 'Translation Management', 'size': '201-500', 'stage': 'Series C'},
+                    {'name': 'Transifex', 'industry': 'Localization Platform', 'size': '51-200', 'stage': 'Series A'},
+                    {'name': 'Crowdin', 'industry': 'Localization Platform', 'size': '51-200', 'stage': 'Bootstrap'},
                 ]
                 
-                for company in random.sample(fintech_defense_companies, 7):
-                    company.update({
-                        'size': random.choice(['51-200', '101-250', '201-500']),
-                        'location': random.choice(['London', 'Singapore', 'Toronto', 'Dublin', 'Washington DC', 'Virginia', 'Colorado', 'Austin']),
-                        'stage': random.choice(['Series A', 'Series B', 'Bootstrap']),
-                        'source': 'Fintech/Defense Research'
-                    })
-                    industry_companies.append(company)
+                discovered.extend(random.sample(alessandro_companies, min(len(alessandro_companies), BATCH_SIZE // 2)))
             
-            discovered.extend(industry_companies)
+            # Ensure we have the right number
+            if len(discovered) > BATCH_SIZE:
+                discovered = random.sample(discovered, BATCH_SIZE)
+            
+            print(f"✅ Discovered {len(discovered)} companies")
             return discovered
         
         # Discover companies
-        all_discovered = discover_companies_from_sources()
+        companies = discover_companies()
         
-        # Filter out duplicates if requested
-        if AVOID_DUPLICATES:
-            filtered = []
-            for company in all_discovered:
-                if company['name'].lower() not in previous_companies:
-                    filtered.append(company)
-            
-            print(f"🚫 Filtered out {len(all_discovered) - len(filtered)} duplicates")
-            all_discovered = filtered
-        
-        # Limit to batch size and randomize
-        if len(all_discovered) > BATCH_SIZE:
-            all_discovered = random.sample(all_discovered, BATCH_SIZE)
-        
-        print(f"✅ Discovered {len(all_discovered)} NEW companies")
-        
-        # Create enhanced DataFrame
-        df = pd.DataFrame(all_discovered)
-        
-        # Add research metadata
+        # Create DataFrame with enhanced data
+        df = pd.DataFrame(companies)
         df['research_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         df['batch_id'] = f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        df['competition_level'] = df['stage'].map({
-            'Pre-Seed': 'Very Low',
-            'Seed': 'Low', 
-            'Series A': 'Low-Medium',
-            'Series B': 'Medium',
-            'Bootstrap': 'Low'
-        }).fillna('Low')
         
-        df['hidden_gem_score'] = df.apply(lambda x: 
-            'Very High' if x['size'] == '11-50' and x['stage'] in ['Seed', 'Pre-Seed'] 
-            else 'High' if x['size'] in ['11-50', '51-200'] 
-            else 'Medium', axis=1)
+        # Add MyLab/defense advantages
+        def get_advantage(row):
+            if RESEARCH_FOCUS == 'anne' or (RESEARCH_FOCUS == 'both' and 'Analytics' in row['industry']):
+                return "Pearson MyLab platform experience directly applicable"
+            elif RESEARCH_FOCUS == 'alessandro' or (RESEARCH_FOCUS == 'both' and any(term in row['industry'] for term in ['Defense', 'Public Safety', 'Government'])):
+                return "Military/public safety experience valued"
+            elif 'Localization' in row['industry']:
+                return "International localization experience valued"
+            else:
+                return "Relevant platform/product experience"
         
-        # Add opportunity assessment
-        opportunity_reasons = [
-            "Newly discovered - minimal competition",
-            "Small team, high growth potential",
-            "Niche market expertise needed",
-            "Early stage - ground floor opportunity",
-            "International expansion phase",
-            "Technical product - values engineering talent",
-            "Remote-first culture",
-            "B2B focus reduces consumer job competition",
-            "API-first company - developer-friendly",
-            "Bootstrap/profitable - stable growth",
-            "Federal contracts - stable revenue",
-            "Defense sector experience valued",
-            "Public safety background advantage",
-            "Localization expertise needed",
-            "Global compliance knowledge valued",
-            "8 years Pearson MyLab platform expertise",
-            "Enterprise-scale user engagement experience",
-            "User analytics and personalization background",
-            "Adaptive learning technology experience",
-            "Assessment platform expertise valued",
-            "Progress tracking and analytics experience",
-            "Large-scale platform management experience",
-            "User journey optimization expertise",
-            "Content personalization experience",
-            "Enterprise onboarding platform experience",
-            "Government contracting opportunity",
-            "Security clearance not required",
-            "International market focus",
-            "Multilingual capabilities valued",
-            "Product education experience valued",
-            "User onboarding expertise needed",
-            "Customer education platform opportunity",
-            "Non-EdTech company values education background"
-        ]
+        df['competitive_advantage'] = df.apply(get_advantage, axis=1)
         
-        df['opportunity_reason'] = [random.choice(opportunity_reasons) for _ in range(len(df))]
-        df['priority_score'] = df.apply(lambda x: 
-            5 if x['hidden_gem_score'] == 'Very High' and x['competition_level'] == 'Very Low'
-            else 4 if x['hidden_gem_score'] == 'High' and x['competition_level'] in ['Low', 'Very Low']
-            else 3, axis=1)
+        # Save discovery results
+        discovery_file = 'research_results/hidden_gems_discovery.csv'
+        df.to_csv(discovery_file, index=False)
+        print(f"📊 Discovery results saved to {discovery_file}")
         
-        # Sort by priority
-        df = df.sort_values(['priority_score', 'hidden_gem_score'], ascending=[False, False])
-        
-        # Save results (append if avoiding duplicates, overwrite if not)
-        output_file = 'research_results/hidden_gems_companies.csv'
-        
-        if AVOID_DUPLICATES and os.path.exists(output_file):
+        # Auto-add to companies_final_ready.csv if enabled
+        if AUTO_ADD_TO_CSV:
+            print("\n🔄 Auto-adding to companies_final_ready.csv...")
+            
             try:
-                existing_df = pd.read_csv(output_file)
-                combined_df = pd.concat([existing_df, df], ignore_index=True)
-                combined_df.to_csv(output_file, index=False)
-                print(f"📝 Appended {len(df)} new companies to existing {len(existing_df)}")
-            except:
-                df.to_csv(output_file, index=False)
-                print(f"📝 Created new file with {len(df)} companies")
-        else:
-            df.to_csv(output_file, index=False)
-            print(f"📝 Saved {len(df)} companies to {output_file}")
+                # Load existing companies file
+                existing_file = 'companies_final_ready.csv'
+                if os.path.exists(existing_file):
+                    existing_df = pd.read_csv(existing_file)
+                    print(f"📋 Loaded {len(existing_df)} existing companies")
+                else:
+                    # Create new file with correct headers to match your CSV
+                    existing_df = pd.DataFrame(columns=[
+                        'Company', 'Industry', 'City', 'Careers Site URL', 'Company_Size', 
+                        'Primary_Source', 'Indeed_URL', 'AngelList_URL', 'Glassdoor_URL', 'Backup_Strategy'
+                    ])
+                    print("📋 Creating new companies_final_ready.csv")
+                
+                # Get existing company names (case-insensitive)
+                existing_names = set(existing_df['Company'].str.lower()) if not existing_df.empty else set()
+                
+                # Format new companies to match your CSV structure exactly
+                new_companies = []
+                for _, company in df.iterrows():
+                    if company['name'].lower() not in existing_names:
+                        # Map company size to your format
+                        size_mapping = {
+                            '11-50': 'Small',
+                            '51-200': 'Medium', 
+                            '101-250': 'Medium',
+                            '201-500': 'Medium',
+                            '501-1000': 'Large',
+                            '1000+': 'Large',
+                            '1001-5000': 'Large',
+                            '2000+': 'Large',
+                            '3000+': 'Large',
+                            '5000+': 'Large',
+                            '10000+': 'Large'
+                        }
+                        
+                        company_size = size_mapping.get(company['size'], 'Medium')
+                        
+                        new_companies.append({
+                            'Company': company['name'],
+                            'Industry': company['industry'],
+                            'City': '',  # Empty like your format
+                            'Careers Site URL': generate_career_url(company['name']),
+                            'Company_Size': company_size,
+                            'Primary_Source': 'careers_page',
+                            'Indeed_URL': generate_indeed_url(company['name']),
+                            'AngelList_URL': '',  # Empty for now
+                            'Glassdoor_URL': generate_glassdoor_url(company['name']),
+                            'Backup_Strategy': 'careers_page,indeed'
+                        })
+                
+                if new_companies:
+                    # Add new companies
+                    new_df = pd.DataFrame(new_companies)
+                    combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+                    
+                    # Save updated file
+                    combined_df.to_csv(existing_file, index=False)
+                    
+                    print(f"✅ Added {len(new_companies)} new companies to {existing_file}")
+                    print(f"📊 Total companies now: {len(combined_df)}")
+                    
+                    # Show what was added
+                    print("\n🎯 New companies added:")
+                    for i, company in enumerate(new_companies, 1):
+                        advantage = df[df['name'] == company['Company']]['competitive_advantage'].iloc[0]
+                        print(f"{i:2d}. {company['Company']} ({company['Company_Size']})")
+                        print(f"     💼 {company['Industry']}")
+                        print(f"     🎯 {advantage}")
+                        print(f"     🔗 {company['Careers Site URL']}")
+                        print()
+                
+                else:
+                    print("ℹ️  No new companies to add (all already exist)")
+                
+            except Exception as e:
+                print(f"❌ Error updating CSV: {e}")
         
-        # Create batch summary
+        # Create summary
         summary = {
-            'batch_info': {
-                'batch_id': df['batch_id'].iloc[0] if not df.empty else 'empty',
+            'discovery_info': {
                 'research_focus': RESEARCH_FOCUS,
-                'batch_size_requested': BATCH_SIZE,
-                'companies_discovered': len(df),
-                'duplicates_filtered': len(all_discovered) - len(df) if AVOID_DUPLICATES else 0,
-                'research_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'companies_discovered': len(companies),
+                'auto_added_to_csv': AUTO_ADD_TO_CSV,
+                'discovery_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             },
-            'discovery_breakdown': {
-                'very_high_gems': len(df[df['hidden_gem_score'] == 'Very High']),
-                'high_gems': len(df[df['hidden_gem_score'] == 'High']),
-                'priority_5_companies': len(df[df['priority_score'] == 5]),
-                'priority_4_companies': len(df[df['priority_score'] == 4])
+            'company_breakdown': {
+                'event_tech': len([c for c in companies if any(term in c['industry'] for term in ['Event', 'Virtual'])]),
+                'analytics_platforms': len([c for c in companies if 'Analytics' in c['industry']]),
+                'fintech': len([c for c in companies if any(term in c['industry'] for term in ['Payment', 'Banking', 'Fintech'])]),
+                'defense_tech': len([c for c in companies if any(term in c['industry'] for term in ['Defense', 'Public Safety', 'Government'])]),
+                'localization': len([c for c in companies if 'Localization' in c['industry']])
             },
-            'top_priorities': df.head(15)[['name', 'industry', 'location', 'stage', 'priority_score', 'opportunity_reason']].to_dict('records')
-        }
-        
-        batch_summary_file = f"research_results/batch_summary_{df['batch_id'].iloc[0] if not df.empty else 'empty'}.json"
-        with open(batch_summary_file, 'w') as f:
-            json.dump(summary, f, indent=2)
-        
-        print(f"\n🎉 Dynamic Discovery Complete!")
-        print(f"📊 NEW companies discovered: {len(df)}")
-        print(f"🏆 Priority 5 companies: {summary['discovery_breakdown']['priority_5_companies']}")
-        print(f"💎 Very High gems: {summary['discovery_breakdown']['very_high_gems']}")
-        
-        # Display ALL top priorities (not just 5)
-        top_15 = df.head(15)
-        print(f"\n🔥 Top 15 NEW Hidden Gems (Priority Order):")
-        for i, company in enumerate(top_15.to_dict('records'), 1):
-            print(f"{i:2d}. {company['name']} - {company['industry']}")
-            print(f"     📍 {company['location']} | 👥 {company['size']} | 💰 {company['stage']}")
-            print(f"     🎯 {company['opportunity_reason']}")
-            print(f"     ⭐ Priority: {company['priority_score']}/5 | Gem Score: {company['hidden_gem_score']}")
-            print()
-        
-        EOF
-    
-    - name: Upload batch results
-      uses: actions/upload-artifact@v4
-      with:
-        name: dynamic-discovery-batch-${{ github.run_number }}
-        path: research_results/
-        retention-days: 90
-    
-    - name: Display batch summary
-      run: |
-        echo "🎉 Dynamic Hidden Gems Discovery Complete!"
-        echo "📊 Check artifacts for full results"
-        echo "🔍 Each run discovers NEW companies"
-        
-        # Show latest batch summary if it exists
-        LATEST_SUMMARY=$(ls research_results/batch_summary_*.json 2>/dev/null | tail -1)
-        if [ -f "$LATEST_SUMMARY" ]; then
-          echo "📋 Latest Batch Summary:"
-          cat "$LATEST_SUMMARY"
-        fi
+            'top_targets': df[
