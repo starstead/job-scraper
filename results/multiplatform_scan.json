@@ -1,8 +1,8 @@
 {
-  "scan_date": "2025-07-25T17:10:18.218345",
+  "scan_date": "2025-08-11T09:37:41.114497",
   "companies_scanned": 242,
   "total_jobs": 20,
-  "new_jobs_added_to_notion": 0,
+  "new_jobs_added_to_notion": 5,
   "platform_breakdown": {
     "careers": 20,
     "indeed": 0,
@@ -10,22 +10,6 @@
     "glassdoor": 0
   },
   "jobs": [
-    {
-      "title": "Group Product Manager",
-      "url": "https://absencesoft.com/careers/#openings",
-      "keywords_found": [
-        "product manager",
-        "Product Manager",
-        "group product manager",
-        "Group Product Manager"
-      ],
-      "source": "Careers Page",
-      "company": "AbsenceSoft",
-      "industry": "Software & Services",
-      "company_size": "Medium",
-      "scan_date": "2025-07-25",
-      "unique_id": "e1cdc804d9436593"
-    },
     {
       "title": "Project Manager",
       "url": "https://absencesoft.com/careers/#openings",
@@ -37,7 +21,7 @@
       "company": "AbsenceSoft",
       "industry": "Software & Services",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "a7b5ee6eba9afd30"
     },
     {
@@ -52,32 +36,22 @@
       "company": "BeSmartee",
       "industry": "Fintech",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "3b5b0ceaa2a42b4d"
     },
     {
-      "title": "Senior Product Manager, Retail Mortgage",
-      "url": "https://jobs.lever.co/better/fadac419-bea9-4058-b38f-8d0144302ffb",
+      "title": "Find your team",
+      "url": "https://blend.com/company/careers/",
       "keywords_found": [
-        "product manager",
-        "Product Manager",
-        "senior product manager",
-        "Senior Product Manager",
-        "product management",
-        "Product Management",
-        "project manager",
-        "Project Manager",
-        "technical project manager",
-        "Technical Project Manager",
-        "remote",
-        "hybrid"
+        "product owner",
+        "Product Owner"
       ],
       "source": "Careers Page",
-      "company": "Better",
-      "industry": "Fintech",
+      "company": "Blend",
+      "industry": "Other",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
-      "unique_id": "33523ba6845880e1"
+      "scan_date": "2025-08-11",
+      "unique_id": "697d3283a5f48317"
     },
     {
       "title": "Product Management",
@@ -93,7 +67,7 @@
       "company": "Bombora",
       "industry": "Marketing Technology",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "f7cecd2db4bc2f98"
     },
     {
@@ -107,7 +81,7 @@
       "company": "burstIQ",
       "industry": "Analytics & AI",
       "company_size": "Small",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "34c359518119a530"
     },
     {
@@ -123,8 +97,25 @@
       "company": "Data Dog",
       "industry": "Analytics & AI",
       "company_size": "Large",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "fa21cfbfcd942840"
+    },
+    {
+      "title": "Senior Product Manager, Cashalo",
+      "url": "https://jobs.ashbyhq.com/tilthq/d3703355-34d1-48ae-8f45-7d186fc496c1",
+      "keywords_found": [
+        "product manager",
+        "Product Manager",
+        "senior product manager",
+        "Senior Product Manager",
+        "remote"
+      ],
+      "source": "Careers Page",
+      "company": "Empower",
+      "industry": "Fintech",
+      "company_size": "Medium",
+      "scan_date": "2025-08-11",
+      "unique_id": "9ac89d813f66d8e0"
     },
     {
       "title": "Your AI Legal Assistant Inside Filevine",
@@ -138,7 +129,7 @@
       "company": "Filevine",
       "industry": "Software & Services",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "d5656b10b831850f"
     },
     {
@@ -153,7 +144,7 @@
       "company": "General Dynamics",
       "industry": "Public Safety",
       "company_size": "Large",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "de690f8226b2ca8f"
     },
     {
@@ -170,7 +161,7 @@
       "company": "Lendesk",
       "industry": "Fintech",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "4b02ff2c113024e9"
     },
     {
@@ -187,38 +178,14 @@
         "Senior Project Manager",
         "program manager",
         "Program Manager",
-        "product operations manager",
-        "project management",
-        "Project Management"
+        "product operations manager"
       ],
       "source": "Careers Page",
       "company": "Magnet Forensics",
       "industry": "Public Safety",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "083c8fef729873e7"
-    },
-    {
-      "title": "Modern Tools, Safer Communities: Technology\u2019s Role in Alternative Response",
-      "url": "https://mark43.com",
-      "keywords_found": [
-        "product manager",
-        "Product Manager",
-        "senior product manager",
-        "Senior Product Manager",
-        "program manager",
-        "Program Manager",
-        "technical program manager",
-        "Technical Program Manager",
-        "remote",
-        "hybrid"
-      ],
-      "source": "Careers Page",
-      "company": "Mark43",
-      "industry": "Public Safety",
-      "company_size": "Medium",
-      "scan_date": "2025-07-25",
-      "unique_id": "cc35c163a0c6f0f4"
     },
     {
       "title": "Careers at Navigator",
@@ -231,7 +198,7 @@
       "company": "Navigator Business Solutions",
       "industry": "Enterprise Software",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "32c95cca83dcefea"
     },
     {
@@ -246,7 +213,7 @@
       "company": "Sardine",
       "industry": "Cybersecurity",
       "company_size": "Small",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "a5c484eff461e812"
     },
     {
@@ -262,7 +229,7 @@
       "company": "Sunbit",
       "industry": "Fintech",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "47f0cd8343056666"
     },
     {
@@ -277,7 +244,7 @@
       "company": "Switch Automation",
       "industry": "Software & Services",
       "company_size": "Small",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "47be77f26a514a53"
     },
     {
@@ -292,7 +259,7 @@
       "company": "Team Snap",
       "industry": "Other",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "6bb48263ea991a80"
     },
     {
@@ -306,8 +273,24 @@
       "company": "Ttec",
       "industry": "Communications",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "814bdf7a69d2c527"
+    },
+    {
+      "title": "Help us shape the future of Upland.",
+      "url": "https://uplandsoftware.com/",
+      "keywords_found": [
+        "project management",
+        "Project Management",
+        "remote",
+        "hybrid"
+      ],
+      "source": "Careers Page",
+      "company": "Upland RO Innovation",
+      "industry": "Software & Services",
+      "company_size": "Medium",
+      "scan_date": "2025-08-11",
+      "unique_id": "934c0c16ba808815"
     },
     {
       "title": "Toggle",
@@ -320,7 +303,7 @@
       "company": "User Testing",
       "industry": "Software & Services",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "d2875dbe4fc10ad7"
     },
     {
@@ -334,7 +317,7 @@
       "company": "Sagitec",
       "industry": "Software & Services",
       "company_size": "Medium",
-      "scan_date": "2025-07-25",
+      "scan_date": "2025-08-11",
       "unique_id": "8ad10704a4f765fc"
     }
   ]
