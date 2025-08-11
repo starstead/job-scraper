@@ -319,4 +319,17 @@ jobs:
                 'defense_tech': len([c for c in companies if any(term in c['industry'] for term in ['Defense', 'Public Safety', 'Government'])]),
                 'localization': len([c for c in companies if 'Localization' in c['industry']])
             },
-            'top_targets': df[
+            'top_targets': df.head(10)[['name', 'industry', 'size', 'stage', 'competitive_advantage']].to_dict('records')
+        }
+        
+        summary_file = f"research_results/discovery_summary_{df['batch_id'].iloc[0] if not df.empty else 'empty'}.json"
+        with open(summary_file, 'w') as f:
+            json.dump(summary, f, indent=2)
+        
+        print(f"\n🎉 Automated Discovery & CSV Integration Complete!")
+        print(f"📊 Companies discovered: {len(companies)}")
+        if AUTO_ADD_TO_CSV:
+            print(f"✅ Successfully integrated with companies_final_ready.csv")
+        print(f"📋 Summary saved to: {summary_file}")
+        
+        EOF
