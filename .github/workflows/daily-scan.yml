@@ -2,6 +2,8 @@ name: Daily Job Scan
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 9 * * 1-5'  # 9 AM weekdays
   push:
     branches: [ main ]
     paths: [ 'multiplatform_job_scraper.py', 'companies_final_ready.csv' ]
