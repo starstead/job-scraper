@@ -419,6 +419,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add companies_final_ready.csv research_results/ || true
         if ! git diff --staged --quiet; then
+          git pull --rebase origin main || true
           git commit -m "🔍 Discovered new companies - $(date '+%Y-%m-%d %H:%M')"
           git push
         else
