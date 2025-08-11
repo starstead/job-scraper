@@ -1,0 +1,31 @@
+{
+  "discovery_info": {
+    "search_focus": "both",
+    "companies_requested": 20,
+    "companies_found": 20,
+    "companies_added": 20,
+    "location_filter": "all",
+    "discovery_timestamp": "2025-08-11 22:04:59"
+  },
+  "industry_breakdown": {
+    "Payment Processing": 1,
+    "Event Tech": 3,
+    "Defense Technology": 2,
+    "Customer Success": 3,
+    "Customer Success Platform": 2,
+    "Fintech": 2,
+    "Event Technology": 1,
+    "User Analytics": 6
+  },
+  "location_breakdown": {
+    "Denver, CO": 3,
+    "Amsterdam, NL": 1,
+    "Austin, TX": 4,
+    "New York, NY": 2,
+    "Remote": 2,
+    "Berlin, DE": 2,
+    "Toronto, CA": 1,
+    "San Francisco, CA": 3,
+    "London, UK": 2
+  }
+}
