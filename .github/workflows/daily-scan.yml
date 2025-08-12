@@ -1,5 +1,4 @@
 name: Daily Job Scan
-
 on:
   workflow_dispatch:
   schedule:
@@ -29,22 +28,286 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install requests pandas beautifulsoup4 notion-client
+        pip install requests pandas beautifulsoup4 lxml html5lib python-dateutil
+        
+    - name: Ensure config_fixed.json exists and is valid
+      run: |
+        echo "🔧 Setting up config_fixed.json..."
+        
+        # Create/validate config_fixed.json with your exact content
+        cat > config_fixed.json << 'EOF'
+        {
+          "keywords": [
+            "product manager",
+            "Product Manager", 
+            "senior product manager",
+            "Senior Product Manager",
+            "associate product manager",
+            "Associate Product Manager",
+            "principal product manager",
+            "Principal Product Manager",
+            "group product manager",
+            "Group Product Manager",
+            "product owner",
+            "Product Owner",
+            "product analyst",
+            "Product Analyst",
+            "head of product",
+            "Head of Product",
+            "director of product management",
+            "Director of Product Management",
+            "product management",
+            "Product Management",
+            "project manager",
+            "Project Manager",
+            "senior project manager",
+            "Senior Project Manager",
+            "program manager", 
+            "Program Manager",
+            "senior program manager",
+            "Senior Program Manager",
+            "technical project manager",
+            "Technical Project Manager",
+            "technical program manager",
+            "Technical Program Manager",
+            "portfolio manager",
+            "Portfolio Manager",
+            "implementation manager",
+            "Implementation Manager", 
+            "implementation project manager",
+            "PMO manager",
+            "PMO Manager",
+            "manager of program management",
+            "manager of project management",
+            "director of program management", 
+            "director of project management",
+            "strategy manager",
+            "Strategy Manager",
+            "business analyst",
+            "Business Analyst",
+            "integration product manager",
+            "product manager mergers and acquisitions",
+            "M&A product manager",
+            "post-merger integration manager",
+            "integration program manager",
+            "customer success operations manager",
+            "customer success strategy manager", 
+            "product operations manager",
+            "customer experience manager",
+            "product-led customer success manager",
+            "project management",
+            "Project Management",
+            "program management",
+            "Program Management",
+            "remote",
+            "hybrid"
+          ],
+          "settings": {
+            "scan_frequency": "daily",
+            "use_multiplatform": true,
+            "indeed_enabled": true,
+            "angellist_enabled": true,
+            "glassdoor_enabled": false
+          }
+        }
+        EOF
+        
+        # Validate the JSON
+        echo "🔍 Validating config_fixed.json:"
+        python3 -c "
+        import json
+        config = json.load(open('config_fixed.json'))
+        keywords = config.get('keywords', [])
+        settings = config.get('settings', {})
+        print(f'✅ config_fixed.json is valid')
+        print(f'📊 Keywords: {len(keywords)}')
+        print(f'📊 Settings: {settings}')
+        "
         
     - name: Create results directory
       run: mkdir -p results
       
-    - name: Run multiplatform job scraper
+    - name: Fix CSV headers if needed
+      run: |
+        python3 << 'EOF'
+        import pandas as pd
+        import os
+        
+        # Check if CSV exists and fix headers if needed
+        if os.path.exists('companies_final_ready.csv'):
+            df = pd.read_csv('companies_final_ready.csv')
+            
+            # Map headers to what the scraper expects
+            header_mapping = {
+                'Careers Site URL': 'Careers URL',
+                'Indeed_URL': 'Indeed Search'
+            }
+            
+            # Rename columns if they exist
+            df = df.rename(columns=header_mapping)
+            
+            # Ensure required columns exist
+            required_cols = ['Company', 'Company_Size', 'Careers URL']
+            for col in required_cols:
+                if col not in df.columns:
+                    if col == 'Company_Size':
+                        df['Company_Size'] = 'Medium'  # Default size
+                    elif col == 'Careers URL':
+                        df['Careers URL'] = df.get('Careers Site URL', 'https://example.com/careers')
+                    else:
+                        df[col] = 'Unknown'
+            
+            # Add Indeed Search column if missing
+            if 'Indeed Search' not in df.columns:
+                df['Indeed Search'] = df['Company'].apply(lambda x: f'"{x}" product manager')
+            
+            # Save fixed CSV
+            df.to_csv('companies_final_ready.csv', index=False)
+            print(f"✅ Fixed CSV with {len(df)} companies")
+        else:
+            print("❌ companies_final_ready.csv not found")
+        EOF
+      
+    - name: Update scraper to use config_fixed.json
+      run: |
+        echo "🔧 Updating scraper to use config_fixed.json..."
+        python3 << 'EOF'
+        # Read the scraper file
+        with open('multiplatform_job_scraper.py', 'r') as f:
+            content = f.read()
+        
+        # Change the default config file from config.json to config_fixed.json
+        old_init = 'def __init__(self, config_file: str = "config.json"):'
+        new_init = 'def __init__(self, config_file: str = "config_fixed.json"):'
+        
+        if old_init in content:
+            content = content.replace(old_init, new_init)
+            print("✅ Updated __init__ to use config_fixed.json")
+        else:
+            print("⚠️  Could not find exact __init__ method, checking for alternatives...")
+            # Try alternative patterns
+            import re
+            pattern = r'def __init__\(self[^)]*config_file[^)]*=\s*["\']config\.json["\'][^)]*\):'
+            if re.search(pattern, content):
+                content = re.sub(r'config\.json', 'config_fixed.json', content)
+                print("✅ Updated config file reference using regex")
+            else:
+                print("⚠️  Could not find config file reference to update")
+        
+        # Also update any hardcoded references to config.json
+        content = content.replace('"config.json"', '"config_fixed.json"')
+        content = content.replace("'config.json'", "'config_fixed.json'")
+        
+        # Update the load_companies method for CSV compatibility
+        old_load_companies = '''    def load_companies(self, csv_file: str) -> List[Company]:
+        """Load companies from CSV file"""
+        companies = []
+        try:
+            df = pd.read_csv(csv_file)
+            for _, row in df.iterrows():
+                companies.append(Company(
+                    name=row['Company'],
+                    size=row.get('Size', 'Unknown'),
+                    careers_url=row['Careers URL'],
+                    indeed_search=row.get('Indeed Search', '')
+                ))
+            logger.info(f"✅ Loaded {len(companies)} companies from {csv_file}")
+        except Exception as e:
+            logger.error(f"Error loading companies: {e}")
+        return companies'''
+        
+        new_load_companies = '''    def load_companies(self, csv_file: str) -> List[Company]:
+        """Load companies from CSV file"""
+        companies = []
+        try:
+            df = pd.read_csv(csv_file)
+            logger.info(f"📊 CSV columns: {list(df.columns)}")
+            logger.info(f"📊 CSV shape: {df.shape}")
+            
+            for _, row in df.iterrows():
+                # Handle different possible column names flexibly
+                name = row.get('Company', row.get('name', 'Unknown Company'))
+                
+                # Try multiple size column names
+                size = (row.get('Size') or row.get('Company_Size') or 
+                       row.get('company_size') or row.get('employees') or 'Unknown')
+                
+                # Try multiple careers URL column names  
+                careers_url = (row.get('Careers URL') or row.get('Careers Site URL') or 
+                              row.get('careers_url') or row.get('website') or 
+                              f'https://{name.lower().replace(" ", "")}.com/careers')
+                
+                # Try multiple indeed search column names
+                indeed_search = (row.get('Indeed Search') or row.get('Indeed_URL') or 
+                               row.get('indeed_url') or f'"{name}" product manager')
+                
+                companies.append(Company(
+                    name=name,
+                    size=size,
+                    careers_url=careers_url,
+                    indeed_search=indeed_search
+                ))
+            logger.info(f"✅ Loaded {len(companies)} companies from {csv_file}")
+        except Exception as e:
+            logger.error(f"Error loading companies: {e}")
+            logger.error(f"Current working directory: {os.getcwd()}")
+            logger.error(f"Files in directory: {os.listdir('.')}")
+        return companies'''
+        
+        # Apply the load_companies replacement
+        content = content.replace(old_load_companies, new_load_companies)
+        
+        # Write back to file
+        with open('multiplatform_job_scraper.py', 'w') as f:
+            f.write(content)
+        
+        print("✅ Updated scraper to use config_fixed.json")
+        print("✅ Updated load_companies method for CSV compatibility")
+        EOF
+      
+    - name: Debug and run multiplatform scraper
       env:
         NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-      run: python multiplatform_job_scraper.py
+      run: |
+        echo "🚀 Starting job scan..."
+        echo "📁 Current directory contents:"
+        ls -la
+        
+        echo "🔍 Checking config.json:"
+        if [ -f config.json ]; then
+          echo "✅ config.json exists"
+          echo "📊 First few lines of config.json:"
+          head -10 config.json
+        else
+          echo "❌ config.json missing!"
+        fi
+        
+        echo "📊 Checking companies CSV:"
+        if [ -f companies_final_ready.csv ]; then
+          echo "✅ companies_final_ready.csv exists"
+          echo "📊 CSV info:"
+          python3 -c "import pandas as pd; df=pd.read_csv('companies_final_ready.csv'); print(f'Shape: {df.shape}'); print(f'Columns: {list(df.columns)}')"
+        else
+          echo "❌ companies_final_ready.csv missing!"
+        fi
+        
+        echo "🔧 Running scraper with debug output..."
+        python multiplatform_job_scraper.py 2>&1 | tee scan_log.txt
+        
+        # Move any output files to results directory
+        find . -name "*.csv" -not -path "./companies_final_ready.csv" -exec mv {} results/ \; 2>/dev/null || true
+        
+        # Copy log to results
+        cp scan_log.txt results/ 2>/dev/null || true
+        
+        echo "📊 Job scan completed"
       
     - name: Upload results as artifact
-      uses: actions/upload-artifact@v4  # ← Fixed version
+      uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: job-scan-results
+        name: job-scan-results-${{ github.run_number }}
         path: results/
         retention-days: 30
         
@@ -55,6 +318,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add results/ || true
         if ! git diff --staged --quiet; then
+          git pull --rebase origin main || true
           git commit -m "🤖 Daily job scan results - $(date '+%Y-%m-%d %H:%M')"
           git push
         else
