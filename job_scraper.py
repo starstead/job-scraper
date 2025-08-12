@@ -120,7 +120,7 @@ def send_to_notion(jobs, notion_token, database_id):
 def main():
     # Load configuration
     companies = load_companies('companies.csv')
-    global_keywords = load_keywords('config.json')
+    global_keywords = load_keywords('config_fixed.json')
     
     # Get environment variables
     notion_token = os.getenv('NOTION_TOKEN')
