@@ -783,7 +783,7 @@ if __name__ == "__main__":
     
     # Run the scan
     jobs = scraper.run_scan(
-        companies_file="companies_final_ready.csv",
+        companies_file="companies_final_with_specialization.csv",
         max_workers=3  # Adjust based on your needs
     )
     
