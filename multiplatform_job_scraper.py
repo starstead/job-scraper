@@ -17,7 +17,6 @@ import ssl
 import warnings
 from urllib3.exceptions import InsecureRequestWarning
 import os
-from datetime import datetime
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -110,28 +109,25 @@ class MultiplatformJobScraper:
             with open(config_file, 'r') as f:
                 config = json.load(f)
             
-            self.pm_keywords = config.get('keywords', [
-                'product manager', 'product management', 'senior product manager',
-                'principal product manager', 'group product manager', 'associate product manager',
-                'lead product manager', 'director of product', 'head of product',
-                'product owner', 'product lead', 'product strategy', 'vp of product',
-                'chief product officer', 'cpo'
-            ])
+            # Use ALL keywords from the JSON file
+            self.job_keywords = config.get('keywords', [])
             
             # Make keywords case-insensitive regex patterns
-            self.pm_patterns = [re.compile(keyword, re.IGNORECASE) for keyword in self.pm_keywords]
-            logger.info(f"✅ Loaded {len(self.pm_keywords)} keywords from {config_file}")
+            self.job_patterns = [re.compile(re.escape(keyword), re.IGNORECASE) for keyword in self.job_keywords]
+            logger.info(f"✅ Loaded {len(self.job_keywords)} keywords from {config_file}")
+            
+            # Load settings if available
+            self.settings = config.get('settings', {})
             
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logger.warning(f"Config file {config_file} not found or corrupted: {e}. Using default keywords.")
-            self.pm_keywords = [
-                'product manager', 'product management', 'senior product manager',
-                'principal product manager', 'group product manager', 'associate product manager',
-                'lead product manager', 'director of product', 'head of product',
-                'product owner', 'product lead', 'product strategy', 'vp of product',
-                'chief product officer', 'cpo'
+            # Fallback keywords if JSON file not found
+            self.job_keywords = [
+                'product manager', 'project manager', 'program manager', 'business analyst',
+                'strategy manager', 'product owner', 'technical project manager'
             ]
-            self.pm_patterns = [re.compile(keyword, re.IGNORECASE) for keyword in self.pm_keywords]
+            self.job_patterns = [re.compile(re.escape(keyword), re.IGNORECASE) for keyword in self.job_keywords]
+            self.settings = {}
 
     def setup_session(self):
         """Set up requests session with retry strategy and rotating user agents"""
@@ -142,133 +138,6 @@ class MultiplatformJobScraper:
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/121.0'
         ]
-
-    def test_notion_connection(self):
-        """Test connection to Notion database"""
-        try:
-            token = os.getenv('NOTION_TOKEN')
-            db_id = os.getenv('NOTION_DATABASE_ID')
-            
-            if not token or not db_id:
-                print("❌ Notion credentials not found in environment variables")
-                print("Set NOTION_TOKEN and NOTION_DATABASE_ID to enable Notion integration")
-                return False
-            
-            headers = {
-                'Authorization': f'Bearer {token}',
-                'Content-Type': 'application/json',
-                'Notion-Version': '2022-06-28'
-            }
-            
-            # Test connection by querying database
-            response = requests.post(
-                f'https://api.notion.com/v1/databases/{db_id}/query',
-                headers=headers,
-                json={'page_size': 1}
-            )
-            
-            if response.status_code == 200:
-                print("✅ Notion connection successful!")
-                return True
-            else:
-                print(f"❌ Notion connection failed: {response.status_code}")
-                return False
-                
-        except Exception as e:
-            print(f"❌ Notion connection error: {e}")
-            return False
-
-    def upload_job_to_notion(self, job: JobListing) -> bool:
-        """Upload a single job to Notion database"""
-        try:
-            token = os.getenv('NOTION_TOKEN')
-            db_id = os.getenv('NOTION_DATABASE_ID')
-            
-            if not token or not db_id:
-                return False
-            
-            headers = {
-                'Authorization': f'Bearer {token}',
-                'Content-Type': 'application/json',
-                'Notion-Version': '2022-06-28'
-            }
-            
-            # Create page data
-            page_data = {
-                'parent': {'database_id': db_id},
-                'properties': {
-                    'Job Title': {
-                        'title': [{'text': {'content': job.title}}]
-                    },
-                    'Company': {
-                        'rich_text': [{'text': {'content': job.company}}]
-                    },
-                    'Location': {
-                        'rich_text': [{'text': {'content': job.location or 'Remote/Not specified'}}]
-                    },
-                    'URL': {
-                        'url': job.url
-                    },
-                    'Source': {
-                        'select': {'name': job.source}
-                    },
-                    'Date Found': {
-                        'date': {'start': datetime.now().strftime('%Y-%m-%d')}
-                    },
-                    'Status': {
-                        'select': {'name': 'New'}
-                    }
-                }
-            }
-            
-            # Add description if available
-            if job.description:
-                page_data['properties']['Description'] = {
-                    'rich_text': [{'text': {'content': job.description[:2000]}}]  # Notion limit
-                }
-            
-            response = requests.post(
-                'https://api.notion.com/v1/pages',
-                headers=headers,
-                json=page_data
-            )
-            
-            return response.status_code == 200
-            
-        except Exception as e:
-            logger.debug(f"Error uploading job to Notion: {e}")
-            return False
-
-    def upload_jobs_to_notion(self, jobs: List[JobListing]) -> int:
-        """Upload multiple jobs to Notion with progress tracking"""
-        if not jobs:
-            return 0
-            
-        # Test connection first
-        if not self.test_notion_connection():
-            logger.info("Notion integration disabled - saving to CSV only")
-            return 0
-        
-        logger.info(f"📤 Uploading {len(jobs)} jobs to Notion...")
-        successful_uploads = 0
-        
-        for i, job in enumerate(jobs, 1):
-            try:
-                if self.upload_job_to_notion(job):
-                    successful_uploads += 1
-                    if i % 5 == 0:  # Progress update every 5 jobs
-                        logger.info(f"  Uploaded {i}/{len(jobs)} jobs...")
-                else:
-                    logger.warning(f"Failed to upload: {job.title} at {job.company}")
-                
-                # Respectful delay to avoid rate limiting
-                time.sleep(0.5)
-                
-            except Exception as e:
-                logger.error(f"Error uploading job {i}: {e}")
-        
-        logger.info(f"✅ Successfully uploaded {successful_uploads}/{len(jobs)} jobs to Notion")
-        return successful_uploads
 
     def get_session(self):
         """Create a new session with random user agent and SSL/timeout fixes"""
@@ -367,12 +236,11 @@ class MultiplatformJobScraper:
                 logger.error(f"CSV file not found: {csv_file}")
         return companies
 
-    def load_existing_jobs(self, notion_data=None):
+    def load_existing_jobs(self):
         """Load existing jobs to avoid duplicates"""
-        # This would integrate with your Notion API
-        # For now, we'll use a simple set
+        # Simple set for tracking duplicates within this run
         self.existing_jobs = set()
-        logger.info(f"Found {len(self.existing_jobs)} existing jobs in Notion")
+        logger.info(f"Initialized job tracking")
 
     def discover_career_urls(self, base_url: str, company_name: str) -> List[str]:
         """Discover actual career page URLs with enhanced detection and timeout handling"""
@@ -471,10 +339,10 @@ class MultiplatformJobScraper:
     def has_job_listings(self, soup: BeautifulSoup) -> bool:
         """Enhanced detection of job listings on page"""
         try:
-            # Check for PM-specific content
+            # Check for job-specific content
             page_text = soup.get_text().lower()
-            pm_indicators = ['product manager', 'product management', 'product owner']
-            if any(indicator in page_text for indicator in pm_indicators):
+            job_indicators = ['product manager', 'project manager', 'program manager', 'business analyst', 'strategy manager']
+            if any(indicator in page_text for indicator in job_indicators):
                 return True
                 
             # Check for common job listing structures
@@ -537,13 +405,13 @@ class MultiplatformJobScraper:
             else:
                 jobs = self.extract_with_generic_method(soup, company, url)
             
-            # Filter for PM roles
-            pm_jobs = [job for job in jobs if self.is_product_manager_role(job.title)]
+            # Filter for target roles
+            target_jobs = [job for job in jobs if self.is_target_job_role(job.title)]
             
-            if pm_jobs:
-                logger.info(f"  ✅ Found {len(pm_jobs)} PM jobs")
+            if target_jobs:
+                logger.info(f"  ✅ Found {len(target_jobs)} target jobs")
             
-            return pm_jobs
+            return target_jobs
                 
         except Exception as e:
             logger.error(f"Error extracting jobs from {url}: {e}")
@@ -603,15 +471,15 @@ class MultiplatformJobScraper:
         return jobs
 
     def extract_with_generic_method(self, soup: BeautifulSoup, company: Company, url: str) -> List[JobListing]:
-        """Generic extraction method for unknown job boards - FIXED VERSION"""
+        """Generic extraction method for unknown job boards"""
         jobs = []
         
         try:
             # Try multiple strategies
             job_elements = []
             
-            # Strategy 1: Find elements containing PM keywords
-            for pattern in self.pm_patterns:
+            # Strategy 1: Find elements containing job keywords
+            for pattern in self.job_patterns:
                 try:
                     elements = soup.find_all(string=pattern)
                     for element in elements:
@@ -627,13 +495,13 @@ class MultiplatformJobScraper:
                     logger.debug(f"Error with pattern {pattern}: {e}")
                     continue
             
-            # Strategy 2: Look for common job container patterns - FIXED
+            # Strategy 2: Look for common job container patterns
             for selector in self.job_selectors['generic']['container']:
                 try:
                     containers = soup.select(selector)
                     for container in containers:
                         try:
-                            if any(pattern.search(container.get_text()) for pattern in self.pm_patterns):
+                            if any(pattern.search(container.get_text()) for pattern in self.job_patterns):
                                 job_elements.append(container)
                         except Exception as e:
                             logger.debug(f"Error checking container text: {e}")
@@ -658,9 +526,9 @@ class MultiplatformJobScraper:
         return jobs
 
     def extract_job_from_element(self, element, company: Company, base_url: str) -> Optional[JobListing]:
-        """Extract job details from a single element - FIXED VERSION"""
+        """Extract job details from a single element"""
         try:
-            # Find title using multiple strategies - FIXED
+            # Find title using multiple strategies
             title = ""
             for selector in self.job_selectors['generic']['title']:
                 try:
@@ -682,7 +550,7 @@ class MultiplatformJobScraper:
                 except Exception as e:
                     logger.debug(f"Error extracting fallback title: {e}")
             
-            if not title or not self.is_product_manager_role(title):
+            if not title or not self.is_target_job_role(title):
                 return None
             
             # Find job URL
@@ -698,7 +566,7 @@ class MultiplatformJobScraper:
             except Exception as e:
                 logger.debug(f"Error extracting job URL: {e}")
             
-            # Find location - FIXED
+            # Find location
             location = ""
             for selector in self.job_selectors['generic']['location']:
                 try:
@@ -723,12 +591,12 @@ class MultiplatformJobScraper:
             logger.debug(f"Error extracting job details: {e}")
             return None
 
-    def is_product_manager_role(self, title: str) -> bool:
-        """Check if job title matches PM keywords"""
+    def is_target_job_role(self, title: str) -> bool:
+        """Check if job title matches any of our target keywords"""
         try:
-            return any(pattern.search(title) for pattern in self.pm_patterns)
+            return any(pattern.search(title) for pattern in self.job_patterns)
         except Exception as e:
-            logger.debug(f"Error checking PM role: {e}")
+            logger.debug(f"Error checking job role: {e}")
             return False
 
     def scrape_indeed(self, company: Company) -> List[JobListing]:
@@ -801,9 +669,9 @@ class MultiplatformJobScraper:
             
             total_jobs = len(final_jobs)
             if total_jobs > 0:
-                logger.info(f"  ✅ Total: {total_jobs} PM jobs")
+                logger.info(f"  ✅ Total: {total_jobs} target jobs")
             else:
-                logger.info("  No PM jobs found")
+                logger.info("  No target jobs found")
             
             return final_jobs
             
@@ -824,10 +692,9 @@ class MultiplatformJobScraper:
         
         return unique_jobs
 
-    def save_results(self, jobs: List[JobListing], filename: str = "product_manager_jobs.csv"):
-        """Save jobs to CSV and optionally upload to Notion"""
+    def save_results(self, jobs: List[JobListing], filename: str = "target_jobs.csv"):
+        """Save jobs to CSV file"""
         try:
-            # Always save to CSV first
             with open(filename, 'w', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
                 writer.writerow(['Company', 'Title', 'Location', 'URL', 'Source', 'Description'])
@@ -842,13 +709,7 @@ class MultiplatformJobScraper:
                         job.description[:200]
                     ])
             
-            logger.info(f"Jobs saved to {filename}")
-            
-            # Try to upload to Notion if configured
-            if jobs:
-                uploaded_count = self.upload_jobs_to_notion(jobs)
-                if uploaded_count > 0:
-                    logger.info(f"✅ {uploaded_count} jobs also saved to Notion database")
+            logger.info(f"✅ Jobs saved to {filename}")
             
         except Exception as e:
             logger.error(f"Error saving results: {e}")
@@ -865,7 +726,9 @@ class MultiplatformJobScraper:
             logger.error("No companies loaded. Exiting.")
             return
         
-        logger.info(f"Keywords: {', '.join(self.pm_keywords[:10])}...")
+        logger.info(f"Keywords: {', '.join(self.job_keywords[:10])}...")
+        if len(self.job_keywords) > 10:
+            logger.info(f"... and {len(self.job_keywords) - 10} more keywords")
         
         all_jobs = []
         
@@ -892,9 +755,9 @@ class MultiplatformJobScraper:
                 time.sleep(random.uniform(1, 2))  # Delay between companies
         
         # Final results
-        logger.info("\n🎉 MULTI-PLATFORM SCAN COMPLETE!")
+        logger.info("\n🎉 SCAN COMPLETE!")
         logger.info(f"Companies scanned: {len(companies)}")
-        logger.info(f"Total PM jobs found: {len(all_jobs)}")
+        logger.info(f"Total target jobs found: {len(all_jobs)}")
         
         if all_jobs:
             # Save results
@@ -922,4 +785,4 @@ if __name__ == "__main__":
         max_workers=3  # Adjust based on your needs
     )
     
-    print(f"\nScan complete! Found {len(jobs)} total PM jobs.")
+    print(f"\nScan complete! Found {len(jobs)} total target jobs.")
