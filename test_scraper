@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""
+Simple test script for the job scraper with Notion integration
+"""
+
+from multiplatform_job_scraper import MultiplatformJobScraper
+
+def test_notion_connection():
+    """Test if Notion is properly configured"""
+    print("🔍 Testing Notion connection...")
+    scraper = MultiplatformJobScraper()
+    
+    if scraper.test_notion_connection():
+        print("✅ Notion is ready to go!")
+        return True
+    else:
+        print("❌ Notion not configured - will save to CSV only")
+        return False
+
+def run_small_test():
+    """Run a test with just a few companies"""
+    print("\n🧪 Running small test scan...")
+    scraper = MultiplatformJobScraper()
+    
+    # Run with default settings (should use your CSV file)
+    jobs = scraper.run_scan(max_workers=1)  # Single-threaded for testing
+    
+    print(f"\n🎉 Test complete! Found {len(jobs)} jobs.")
+    return jobs
+
+def run_full_scan():
+    """Run the complete scan"""
+    print("\n🚀 Running FULL scan...")
+    scraper = MultiplatformJobScraper()
+    
+    jobs = scraper.run_scan(
+        companies_file="companies_final_with_specialization.csv",  # Your CSV file
+        max_workers=3
+    )
+    
+    print(f"\n🎉 Full scan complete! Found {len(jobs)} jobs.")
+    return jobs
+
+if __name__ == "__main__":
+    print("=== Job Scraper Test Suite ===\n")
+    
+    # Step 1: Test Notion
+    notion_works = test_notion_connection()
+    
+    # Step 2: Ask user what they want to do
+    print("\nWhat would you like to do?")
+    print("1. Small test (few companies)")
+    print("2. Full scan (all companies)")
+    print("3. Just test Notion and exit")
+    
+    choice = input("\nEnter choice (1, 2, or 3): ").strip()
+    
+    if choice == "1":
+        run_small_test()
+    elif choice == "2":
+        run_full_scan()
+    elif choice == "3":
+        print("Notion test complete!")
+    else:
+        print("Invalid choice. Running small test...")
+        run_small_test()
+    
+    print("\n✅ All done!")
