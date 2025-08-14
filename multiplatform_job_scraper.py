@@ -17,6 +17,7 @@ import ssl
 import warnings
 from urllib3.exceptions import InsecureRequestWarning
 import os
+from datetime import datetime
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -141,6 +142,133 @@ class MultiplatformJobScraper:
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/121.0'
         ]
+
+    def test_notion_connection(self):
+        """Test connection to Notion database"""
+        try:
+            token = os.getenv('NOTION_TOKEN')
+            db_id = os.getenv('NOTION_DATABASE_ID')
+            
+            if not token or not db_id:
+                print("❌ Notion credentials not found in environment variables")
+                print("Set NOTION_TOKEN and NOTION_DATABASE_ID to enable Notion integration")
+                return False
+            
+            headers = {
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json',
+                'Notion-Version': '2022-06-28'
+            }
+            
+            # Test connection by querying database
+            response = requests.post(
+                f'https://api.notion.com/v1/databases/{db_id}/query',
+                headers=headers,
+                json={'page_size': 1}
+            )
+            
+            if response.status_code == 200:
+                print("✅ Notion connection successful!")
+                return True
+            else:
+                print(f"❌ Notion connection failed: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ Notion connection error: {e}")
+            return False
+
+    def upload_job_to_notion(self, job: JobListing) -> bool:
+        """Upload a single job to Notion database"""
+        try:
+            token = os.getenv('NOTION_TOKEN')
+            db_id = os.getenv('NOTION_DATABASE_ID')
+            
+            if not token or not db_id:
+                return False
+            
+            headers = {
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json',
+                'Notion-Version': '2022-06-28'
+            }
+            
+            # Create page data
+            page_data = {
+                'parent': {'database_id': db_id},
+                'properties': {
+                    'Job Title': {
+                        'title': [{'text': {'content': job.title}}]
+                    },
+                    'Company': {
+                        'rich_text': [{'text': {'content': job.company}}]
+                    },
+                    'Location': {
+                        'rich_text': [{'text': {'content': job.location or 'Remote/Not specified'}}]
+                    },
+                    'URL': {
+                        'url': job.url
+                    },
+                    'Source': {
+                        'select': {'name': job.source}
+                    },
+                    'Date Found': {
+                        'date': {'start': datetime.now().strftime('%Y-%m-%d')}
+                    },
+                    'Status': {
+                        'select': {'name': 'New'}
+                    }
+                }
+            }
+            
+            # Add description if available
+            if job.description:
+                page_data['properties']['Description'] = {
+                    'rich_text': [{'text': {'content': job.description[:2000]}}]  # Notion limit
+                }
+            
+            response = requests.post(
+                'https://api.notion.com/v1/pages',
+                headers=headers,
+                json=page_data
+            )
+            
+            return response.status_code == 200
+            
+        except Exception as e:
+            logger.debug(f"Error uploading job to Notion: {e}")
+            return False
+
+    def upload_jobs_to_notion(self, jobs: List[JobListing]) -> int:
+        """Upload multiple jobs to Notion with progress tracking"""
+        if not jobs:
+            return 0
+            
+        # Test connection first
+        if not self.test_notion_connection():
+            logger.info("Notion integration disabled - saving to CSV only")
+            return 0
+        
+        logger.info(f"📤 Uploading {len(jobs)} jobs to Notion...")
+        successful_uploads = 0
+        
+        for i, job in enumerate(jobs, 1):
+            try:
+                if self.upload_job_to_notion(job):
+                    successful_uploads += 1
+                    if i % 5 == 0:  # Progress update every 5 jobs
+                        logger.info(f"  Uploaded {i}/{len(jobs)} jobs...")
+                else:
+                    logger.warning(f"Failed to upload: {job.title} at {job.company}")
+                
+                # Respectful delay to avoid rate limiting
+                time.sleep(0.5)
+                
+            except Exception as e:
+                logger.error(f"Error uploading job {i}: {e}")
+        
+        logger.info(f"✅ Successfully uploaded {successful_uploads}/{len(jobs)} jobs to Notion")
+        return successful_uploads
 
     def get_session(self):
         """Create a new session with random user agent and SSL/timeout fixes"""
@@ -697,8 +825,9 @@ class MultiplatformJobScraper:
         return unique_jobs
 
     def save_results(self, jobs: List[JobListing], filename: str = "product_manager_jobs.csv"):
-        """Save jobs to CSV"""
+        """Save jobs to CSV and optionally upload to Notion"""
         try:
+            # Always save to CSV first
             with open(filename, 'w', newline='', encoding='utf-8') as file:
                 writer = csv.writer(file)
                 writer.writerow(['Company', 'Title', 'Location', 'URL', 'Source', 'Description'])
@@ -714,6 +843,12 @@ class MultiplatformJobScraper:
                     ])
             
             logger.info(f"Jobs saved to {filename}")
+            
+            # Try to upload to Notion if configured
+            if jobs:
+                uploaded_count = self.upload_jobs_to_notion(jobs)
+                if uploaded_count > 0:
+                    logger.info(f"✅ {uploaded_count} jobs also saved to Notion database")
             
         except Exception as e:
             logger.error(f"Error saving results: {e}")
