@@ -88,17 +88,19 @@ class MultiplatformJobScraper:
             },
             'generic': {
                 'container': [
-                    '.job', '.position', '.opening', '.career', '.role', '.opportunity',
-                    '[class*="job"]', '[class*="position"]', '[class*="career"]',
-                    '[data-testid*="job"]', '[data-qa*="job"]'
+                    '.js-card', '.js-careers-page-job-list-item', '.job', '.position', '.opening', '.career', '.role', '.opportunity',
+                    '[class*="job"]', '[class*="position"]', '[class*="career"]', '[class*="opening"]',
+                    '[data-testid*="job"]', '[data-qa*="job"]', 'li', '.list-item'
                 ],
                 'title': [
-                    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', '.title', '.job-title',
-                    '[class*="title"]', 'a', 'strong'
+                    '.js-job-list-opening-name', 'h3.rb-h3', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
+                    '.title', '.job-title', '.position-title', '.role-title', '.opening-title',
+                    '[class*="title"]', '[class*="name"]', 'a[href*="job"]', 'a[href*="career"]',
+                    'strong', 'b'
                 ],
                 'location': [
-                    '.location', '.city', '.office', '[class*="location"]',
-                    '[class*="city"]', '[class*="office"]'
+                    '.js-job-list-opening-loc', '.location', '.city', '.office', '[class*="location"]',
+                    '[class*="city"]', '[class*="office"]', '[class*="loc"]'
                 ]
             }
         }
@@ -526,27 +528,35 @@ class MultiplatformJobScraper:
         return jobs
 
     def extract_job_from_element(self, element, company: Company, base_url: str) -> Optional[JobListing]:
-        """Extract job details from a single element"""
+        """Extract job details from a single element with improved title extraction"""
         try:
-            # Find title using multiple strategies
+            # Find title using multiple strategies with better filtering
             title = ""
             for selector in self.job_selectors['generic']['title']:
                 try:
                     title_elem = element.select_one(selector)
                     if title_elem:
-                        title = title_elem.get_text().strip()
-                        if len(title) > 5 and len(title) < 200:  # Reasonable title length
+                        potential_title = title_elem.get_text().strip()
+                        # Better title validation
+                        if (len(potential_title) > 5 and 
+                            len(potential_title) < 100 and  # Not too long
+                            not self.is_description_text(potential_title)):  # Not description text
+                            title = potential_title
                             break
                 except Exception as e:
                     logger.debug(f"Error with title selector {selector}: {e}")
                     continue
             
             if not title:
-                # Fallback: use the first line of text
+                # Fallback: use the first reasonable line of text
                 try:
                     text_lines = [line.strip() for line in element.get_text().split('\n') if line.strip()]
-                    if text_lines:
-                        title = text_lines[0]
+                    for line in text_lines[:3]:  # Check first 3 lines only
+                        if (len(line) > 5 and 
+                            len(line) < 100 and 
+                            not self.is_description_text(line)):
+                            title = line
+                            break
                 except Exception as e:
                     logger.debug(f"Error extracting fallback title: {e}")
             
@@ -573,7 +583,8 @@ class MultiplatformJobScraper:
                     loc_elem = element.select_one(selector)
                     if loc_elem:
                         location = loc_elem.get_text().strip()
-                        break
+                        if len(location) < 200:  # Reasonable location length
+                            break
                 except Exception as e:
                     logger.debug(f"Error with location selector {selector}: {e}")
                     continue
@@ -590,6 +601,36 @@ class MultiplatformJobScraper:
         except Exception as e:
             logger.debug(f"Error extracting job details: {e}")
             return None
+
+    def is_description_text(self, text: str) -> bool:
+        """Check if text looks like description/marketing copy rather than a job title"""
+        text_lower = text.lower()
+        
+        # Common description/marketing phrases that indicate this isn't a job title
+        description_indicators = [
+            'track projects', 'offer', 'thrive', 'deploy', 'manage the lifecycle',
+            'we offer', 'our teams', 'you will', 'responsible for', 'work with',
+            'looking for', 'join us', 'opportunity to', 'benefits', 'culture',
+            'committed to', 'fostered', 'variety of', 'based on', 'allowing',
+            'performed remotely', 'collaboration', 'work policy', 'office location',
+            'improve my skills', 'expand my field', 'value flexibility', 'hybrid model',
+            'spend time', 'promote relationships', 'prioritize employee', 'wellbeing',
+            'mental health', 'fully remote', 'accommodating', 'impact you make'
+        ]
+        
+        # If text contains these phrases, it's likely description text, not a title
+        if any(indicator in text_lower for indicator in description_indicators):
+            return True
+            
+        # Check for excessive punctuation or weird formatting
+        if text.count('.') > 2 or text.count(',') > 3:
+            return True
+            
+        # Check for sentence-like structure (starts with capital, ends with period)
+        if len(text) > 50 and text.endswith('.'):
+            return True
+            
+        return False
 
     def is_target_job_role(self, title: str) -> bool:
         """Check if job title matches any of our target keywords"""
